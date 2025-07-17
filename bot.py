@@ -1,6 +1,4 @@
 from web3 import Web3
-from web3.auto import w3 as web3_auto # For message signing
-from eth_account.messages import encode_defunct_message # For message signing
 from dotenv import load_dotenv
 import asyncio
 import random
