@@ -101,8 +101,8 @@ def load_config():
         "explorer": "https://explorer.testnet.citrea.xyz",
         # Satsuma Exchange Contracts (from previous script and user's new data)
         "satsuma_swap_router_address": Web3.to_checksum_address("0x3012e9049d05b4b5369d690114d5a5861ebb85cb"), # Contract for swaps
-        "satsuma_lp_manager_address": Web3.to_checksum_address("0xcA3534C15Cc22535BF880Ba204c69340f813730b"), # Contract for adding LP
-        "satsuma_lp_reward_contract_address": Web3.to_checksum_address("0x69D57B9D705eaD73a5d2f2476C30c55bD755cc2F"), # New LP Reward Contract
+        "satsuma_lp_manager_address": Web3.to_checksum_address("0xcA3534C15Cc22535BF880Ba204c69340f813730b"), # Contract for adding LP (might be outdated for addLiquidity)
+        "satsuma_lp_reward_contract_address": Web3.to_checksum_address("0x69D57B9D705eaD73a5d2f2476C30c55bD755cc2F"), # New LP Reward Contract (also likely the NonfungiblePositionManager)
         # IMPORTANT: This is the address of the USDC/WCBTC pool. Please verify this address on Satsuma.exchange's liquidity page.
         # It was updated based on the URL you provided: https://www.satsuma.exchange/liquidity/0x9aa034631e14e2c7fc01890f8d7b19ab6aed1666/new-position
         "satsuma_pool_address": Web3.to_checksum_address("0x9aa034631e14e2c7fc01890f8d7b19ab6aed1666"), 
@@ -698,7 +698,7 @@ async def add_lp_satsuma(w3, config, private_key):
                 console.print(f"[red]- One or both pool reserves are zero (USDC: {reserve_usdc}, WCBTC: {reserve_wcbtc}). Cannot calculate ratio. Aborting LP add.[/red]")
                 return
 
-            wcbtc_amount_to_add_float = (usdc_amount_to_add_wei * reserve_wcbtc) / reserve_usdc # FIX: Removed the extra *(10**12)
+            wcbtc_amount_to_add_float = (usdc_amount_to_add_wei * reserve_wcbtc) / reserve_usdc 
             wcbtc_amount_to_add_wei = int(wcbtc_amount_to_add_float)
 
             wcbtc_amount_to_add = wcbtc_amount_to_add_wei / 10**18
@@ -740,15 +740,16 @@ async def add_lp_satsuma(w3, config, private_key):
 
         # Approve tokens to the LP manager contract
         console.print("[yellow]> Approving USDC and WCBTC for LP manager...[/yellow]")
-        usdc_approval = await approve_token(w3, config, account, config["usdc_address"], config["satsuma_lp_manager_address"], usdc_amount_to_add_wei)
-        wcbtc_approval = await approve_token(w3, config, account, config["wcbtc_address"], config["satsuma_lp_manager_address"], wcbtc_amount_to_add_wei)
+        # Changed target of approval to satsuma_lp_reward_contract_address (NonfungiblePositionManager)
+        usdc_approval = await approve_token(w3, config, account, config["usdc_address"], config["satsuma_lp_reward_contract_address"], usdc_amount_to_add_wei)
+        wcbtc_approval = await approve_token(w3, config, account, config["wcbtc_address"], config["satsuma_lp_reward_contract_address"], wcbtc_amount_to_add_wei)
         
         if not usdc_approval["success"] or not wcbtc_approval["success"]:
             console.print("[red]- Token approval failed. Aborting liquidity add.[/red]")
             return
             
-        # Get router contract (assuming LP manager has addLiquidity function from SWAP_ROUTER_ABI)
-        router_contract = w3.eth.contract(address=config["satsuma_lp_manager_address"], abi=SWAP_ROUTER_ABI)
+        # Get router contract (now targeting the NonfungiblePositionManager)
+        router_contract = w3.eth.contract(address=config["satsuma_lp_reward_contract_address"], abi=SWAP_ROUTER_ABI) # Using SWAP_ROUTER_ABI for now, assuming it has addLiquidity
         deadline = int(time.time()) + 20 * 60 # 20 minutes
 
         # Define slippage tolerance (e.g., 0.5%)
@@ -772,8 +773,8 @@ async def add_lp_satsuma(w3, config, private_key):
             deadline
         ).build_transaction({
             "from": account.address,
-            "gas": 800000, # Increased gas limit for addLiquidity
-            "gasPrice": w3.eth.gas_price,
+            "gas": 0x90543, # Updated gas limit from user's provided data for "create position"
+            "gasPrice": 0xb71b78, # Updated gas price from user's provided data for "create position"
             "nonce": w3.eth.get_transaction_count(account.address),
             "chainId": config["chain_id"]
         })
@@ -789,20 +790,7 @@ async def add_lp_satsuma(w3, config, private_key):
         else:
             console.print("[red]- Liquidity add transaction failed[/red]")
             try:
-                # Attempt to decode revert reason
-                tx = w3.eth.get_transaction(tx_hash)
-                # This requires a local node or archive node to simulate call at previous block
-                # For public RPCs, this might not work reliably.
-                # result = w3.eth.call({
-                #     'to': tx['to'],
-                #     'from': tx['from'],
-                #     'value': tx['value'],
-                #     'data': tx['input'],
-                #     'gas': tx['gas'],
-                #     'gasPrice': tx['gasPrice'],
-                #     'nonce': tx['nonce']
-                # }, receipt['blockNumber'] - 1)
-                # console.print(f"[red]- Transaction reverted: {result.hex()}[/red]")
+                # Attempt to decode revert reason (this part is hard to make reliable on public RPCs)
                 console.print(f"[cyan]Transaction receipt: {receipt}[/cyan]")
             except Exception as e:
                 console.print(f"[red]- Error decoding revert reason: {str(e)}[/red]")
