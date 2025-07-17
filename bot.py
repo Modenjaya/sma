@@ -44,19 +44,19 @@ def display_menu():
     table.add_column(justify="center", style="cyan")
     
     options = [
-        "1. Buy BTC (Crest) - Fixed Amount", # Now option 1
-        "2. Sell BTC (Crest) - Fixed Amount", # Now option 2
+        "1. BUY BTC (CRESTAPP)",
+        "2. SELL BTC (CRESTAPP)",
         "3. Borrow NUSD with cBTC (Nectra)",
         "4. Deposit NUSD (Nectra)",
         "5. Swap cBTC (Citrea Native) to NUSD (Satsuma)",
         "6. Swap USDC to SUMA (Satsuma) - Interactive",
         "7. Swap USDC to WCBTC (Satsuma) - Interactive",
-        "8. Add Liquidity (WCBTC + USDC) (Satsuma) - Dynamic",
+        "8. Add Liquidity (WCBTC + USDC) (Satsuma) - Fixed Amounts",
         "9. Convert SUMA to veSUMA (Satsuma)",
         "10. Stake veSUMA (Satsuma)",
         "11. Claim LP Reward (Satsuma)",
         "12. Run All Features",
-        "13. Exit" # Now option 13
+        "13. Exit"
     ]
     
     for opt in options:
@@ -113,6 +113,9 @@ def load_config():
         "nectra_borrow_contract_address": Web3.to_checksum_address("0x6cDC594d5A135d0307aee3449023A42385422355"),
         "nectra_deposit_contract_address": Web3.to_checksum_address("0x2e8ff07d4F29DA47209a58AD66845F7c290E78fD"),
 
+        # Crestapp Contracts
+        "crestapp_contract_address": Web3.to_checksum_address("0xe60D30D6e3f36b95B82eeBaeA32d0dB689Ac7385"), # New Crestapp contract address
+
         # Token Addresses (updated based on user's new data)
         "usdc_address": Web3.to_checksum_address("0x36c16eaC6B0Ba6c50f494914ff015fCa95B7835F"),
         "wcbtc_address": Web3.to_checksum_address("0x8d0c9d1c17ae5e40fff9be350f57840e9e66cd93"),
@@ -123,12 +126,7 @@ def load_config():
         # Staking and Voting Contracts (updated based on user's new data)
         "staking_contract_address": Web3.to_checksum_address("0x22625aDDDcD0e6D981312f6c6E2DBb0003863A90"),
         "voting_contract_address": Web3.to_checksum_address("0x1234567890123456789012345678901234567890"), # Placeholder, user didn't provide new voting contract
-        "gauge_address": Web3.to_checksum_address("0x1234567890123456789012345678901234567890"), # Placeholder, user didn't provide new gauge address
-
-        # Crest App Contracts/Tokens
-        "crest_trading_contract_address": Web3.to_checksum_address("0xe60D30D6e3f36b95B82eeBaeA32d0dB689Ac7385"),
-        "crest_btc_address": Web3.to_checksum_address("0x9fee47bf6a2bf54a9ce38caff94bb50adca4710e0"), # Assuming this is the BTC token on Crest
-        "wbtc_sepolia_address": Web3.to_checksum_address("0xE918A5a47b8e0AFAC2382bC5D1e981613e63fB07") # WBTC Sepolia address, noted for reference
+        "gauge_address": Web3.to_checksum_address("0x1234567890123456789012345678901234567890") # Placeholder, user didn't provide new gauge address
     }
 
     return config
@@ -303,7 +301,6 @@ VESUMA_ABI = [
         "type": "function"
     },
     {
-
         "name": "increase_unlock_time",
         "inputs": [
             {"name": "_unlock_time", "type": "uint256"}
@@ -332,54 +329,6 @@ STAKING_ABI = [
         "type": "function"
     }
 ]
-
-# NonfungiblePositionManager ABI (partial, for mint and multicall)
-# This ABI is based on common Uniswap V3-like implementations.
-NONFUNGIBLE_POSITION_MANAGER_ABI = [
-    {
-        "inputs": [
-            {
-                "components": [
-                    {"internalType": "address", "name": "token0", "type": "address"},
-                    {"internalType": "address", "name": "token1", "type": "address"},
-                    {"internalType": "uint24", "name": "fee", "type": "uint24"},
-                    {"internalType": "int24", "name": "tickLower", "type": "int24"},
-                    {"internalType": "int24", "name": "tickUpper", "type": "int24"},
-                    {"internalType": "uint256", "name": "amount0Desired", "type": "uint256"},
-                    {"internalType": "uint256", "name": "amount1Desired", "type": "uint256"},
-                    {"internalType": "uint256", "name": "amount0Min", "type": "uint256"},
-                    {"internalType": "uint256", "name": "amount1Min", "type": "uint256"},
-                    {"internalType": "address", "name": "recipient", "type": "address"},
-                    {"internalType": "uint256", "name": "deadline", "type": "uint256"}
-                ],
-                "internalType": "struct INonfungiblePositionManager.MintParams",
-                "name": "params",
-                "type": "tuple"
-            }
-        ],
-        "name": "mint",
-        "outputs": [
-            {"internalType": "uint256", "name": "tokenId", "type": "uint256"},
-            {"internalType": "uint128", "name": "liquidity", "type": "uint128"},
-            {"internalType": "uint256", "name": "amount0", "type": "uint256"},
-            {"internalType": "uint256", "name": "amount1", "type": "uint256"}
-        ],
-        "stateMutability": "payable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {"internalType": "bytes[]", "name": "data", "type": "bytes[]"}
-        ],
-        "name": "multicall",
-        "outputs": [
-            {"internalType": "bytes[]", "name": "results", "type": "bytes[]"}
-        ],
-        "stateMutability": "payable",
-        "type": "function"
-    }
-]
-
 
 # === Helper Function to Send Custom Raw Transactions ===
 async def send_custom_transaction(w3, config, account, to_address, data_hex, value_wei, gas_limit, gas_price_wei, description="Transaction"):
@@ -455,10 +404,48 @@ async def approve_token(w3, config, account, token_address, spender_address, amo
         console.print(f"[red]- Token approval error for {account.address}: {str(e)}[/red]")
         return {"success": False, "error": str(e)}
 
+# === CRESTAPP Functions ===
+async def buy_btc_crestapp(w3, config, private_key):
+    account = w3.eth.account.from_key(private_key)
+    console.print(f"\n[blue]=== Buying BTC on CRESTAPP for: {account.address} ===[/blue]")
+    console.print("[yellow]WARNING: This transaction uses hardcoded gas parameters and data. Transaction might fail if network conditions change.[/yellow]")
+
+    # Transaction details from user's provided data for BUY 10$ BTC
+    to_address = config["crestapp_contract_address"]
+    data_hex = "0x0d71be6400000000000000000000000007f8ec2b79b7a1998fd0b21a4668b0cf1ca72c02000000000000000000000000b1a7559274bc1e92c355c7244255dc291afedb000000000000000000000000009fee47bf6a2bf54a9ce38caff94bb50adca4710e000000000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0000000000000000000000000000000000000000000000008ac7230489e8000000000000000000000000000000000000000000000000000000004b7f459014000000000000000000000000000000000000000000000000000000000068797eed463e82a6ffc74926c6868be5f7e0d46e40b5e7fdf90f914044b1478c0530a4080000000000000000000000000000000000000000000000000000000000000120000000000000000000000000000000000000000000000000000000000000004152db9f643f891f1be72e43bebb3170451fac0a6811c6c56611b44660a643e2811dd7813f0078c7b0cafc90ea2d042a40da1ce0ab9d2c9388aca61da2b4f45a731c00000000000000000000000000000000000000000000000000000000000000"
+    value_wei = 0x0 # For BUY, value is 0 as per provided data
+    gas_limit = 0x4d681 # from user's data
+    gas_price_wei = 0xb71b78 # from user's data
+
+    await send_custom_transaction(w3, config, account, to_address, data_hex, value_wei, gas_limit, gas_price_wei, "Buy BTC (CRESTAPP)")
+
+async def sell_btc_crestapp(w3, config, private_key):
+    account = w3.eth.account.from_key(private_key)
+    console.print(f"\n[blue]=== Selling BTC on CRESTAPP for: {account.address} ===[/blue]")
+    console.print("[yellow]WARNING: This transaction uses hardcoded gas parameters and data. Transaction might fail if network conditions change.[/yellow]")
+
+    # Transaction details from user's provided data for SELL 10$ BTC
+    to_address = config["crestapp_contract_address"]
+    data_hex = "0x0d71be6400000000000000000000000007f8ec2b79b7a1998fd0b21a4668b0cf1ca72c02000000000000000000000000b1a7559274bc1e92c355c7244255dc291afedb00000000000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0000000000000000000000009fee47bf6a2bf54a9ce38caff94bb50adca4710e00000000000000000000000000000000000000000000000000004b7a9d784c000000000000000000000000000000000000000000000000008ac7230489e800000000000000000000000000000000000000000000000000000000000068797f28f03be985515bbc16c3dc468ac8877a0d34acc3f816875900121b78aed4041c5b0000000000000000000000000000000000000000000000000000000000000120000000000000000000000000000000000000000000000000000000000000004173dd5332081ded1d6d12d38f1b45035f9be6c417a2152a38d7e09afb4816038a4c30179b0f2ec8599b7f3e42ed2babe18d7dbe440bfe95807a4f7db7676919501c00000000000000000000000000000000000000000000000000000000000000"
+    value_wei = 0x4b7a9d784c00 # This value is present in the provided transaction data for SELL.
+    gas_limit = 0x37b9e # from user's data
+    gas_price_wei = 0xb71b78 # from user's data
+
+    # NOTE: Selling BTC might imply that the contract needs to transfer cBTC *from* the user.
+    # If the provided data is a direct call to the Crestapp contract that also takes 'value',
+    # then approval for cBTC might not be needed if it's handled like a native token.
+    # However, if it interacts with a WCBTC token contract that then sells, an approval would be needed.
+    # For now, following the provided raw transaction data directly.
+
+    await send_custom_transaction(w3, config, account, to_address, data_hex, value_wei, gas_limit, gas_price_wei, "Sell BTC (CRESTAPP)")
+
+
 # === Nectra Functions ===
 async def borrow_nusd_with_cbtc(w3, config, private_key):
     account = w3.eth.account.from_key(private_key)
     console.print(f"\n[blue]=== Borrowing NUSD with cBTC for: {account.address} ===[/blue]")
+    console.print("[yellow]WARNING: This transaction uses hardcoded gas parameters and data. Transaction might fail if network conditions change.[/yellow]")
+
 
     # Transaction details from user's provided data
     to_address = config["nectra_borrow_contract_address"]
@@ -472,6 +459,8 @@ async def borrow_nusd_with_cbtc(w3, config, private_key):
 async def deposit_nusd(w3, config, private_key):
     account = w3.eth.account.from_key(private_key)
     console.print(f"\n[blue]=== Depositing NUSD for: {account.address} ===[/blue]")
+    console.print("[yellow]WARNING: This transaction uses hardcoded gas parameters and data. Transaction might fail if network conditions change.[/yellow]")
+
 
     # Transaction details from user's provided data
     to_address = config["nectra_deposit_contract_address"]
@@ -493,6 +482,8 @@ async def deposit_nusd(w3, config, private_key):
 async def swap_cbtc_to_nusd(w3, config, private_key):
     account = w3.eth.account.from_key(private_key)
     console.print(f"\n[blue]=== Swapping cBTC (Citrea Native) to NUSD for: {account.address} ===[/blue]")
+    console.print("[yellow]WARNING: This transaction uses hardcoded gas parameters and data. Transaction might fail if network conditions change.[/yellow]")
+
 
     # Transaction details from user's provided data
     to_address = config["satsuma_swap_router_address"]
@@ -675,6 +666,8 @@ async def wrap_cbtc(w3, config, account, amount_cbtc):
         amount_wei = w3.to_wei(amount_cbtc, 'ether') # cBTC has 18 decimals like ETH
         
         console.print(f"\n[blue]=== Wrapping {amount_cbtc} cBTC to WCBTC for: {account.address} ===[/blue]")
+        console.print("[yellow]WARNING: This transaction uses hardcoded gas parameters and data. Transaction might fail if network conditions change.[/yellow]")
+
 
         to_address = config["wcbtc_address"] # WCBTC contract address
         data_hex = "0xd0e30db0" # Function selector for deposit() on WETH-like contracts
@@ -692,8 +685,9 @@ async def add_lp_satsuma(w3, config, private_key):
     try: # Outer try block for the entire function
         account = w3.eth.account.from_key(private_key)
         console.print(f"\n[blue]=== Adding Liquidity (WCBTC + USDC) for: {account.address} ===[/blue]")
-        console.print("[yellow]Note: This function dynamically calculates amounts and mints LP tokens to your wallet.[/yellow]")
-        console.print("[red bold]WARNING: This method is highly fragile and relies on exact byte offsets for tick ranges. Any change in contract ABI or parameters may break it.[/red bold]")
+        console.print("[yellow]Note: This function uses fixed amounts (5 USDC and ~0.000064 WCBTC) from provided transaction data.[/yellow]")
+        console.print("[yellow]WARNING: This transaction uses hardcoded gas parameters and data. Transaction might fail if network conditions change.[/yellow]")
+
 
         usdc_contract = w3.eth.contract(address=config["usdc_address"], abi=ERC20_ABI)
         wcbtc_contract = w3.eth.contract(address=config["wcbtc_address"], abi=ERC20_ABI)
@@ -707,66 +701,21 @@ async def add_lp_satsuma(w3, config, private_key):
         console.print(f"[green]+ Current WCBTC Balance: {wcbtc_balance / 10**18:.6f} WCBTC[/green]")
         console.print(f"[green]+ Current Native cBTC Balance: {cbtc_native_balance / 10**18:.6f} cBTC[/green]")
 
-        while True:
-            try:
-                usdc_amount_to_add_str = console.input("[bold magenta]> Enter the amount of USDC to add to LP (e.g., 5.0): [/bold magenta]")
-                usdc_amount_to_add = float(usdc_amount_to_add_str)
-                if usdc_amount_to_add <= 0:
-                    console.print("[red]- Amount must be positive. Please enter a valid number.[/red]")
-                    continue
-                break
-            except ValueError:
-                console.print("[red]- Invalid input. Please enter a valid number.[/red]")
+        # Fixed amounts from the provided successful transaction data
+        usdc_amount_to_add_wei = 5 * (10**6) # 5 USDC
+        wcbtc_amount_to_add_wei = 64203400000000 # 0.0000642034 WCBTC (from your provided data: 0x3a3529440000 is 0.0000642034 in wei)
 
-        usdc_amount_to_add_wei = int(usdc_amount_to_add * (10**6)) # USDC has 6 decimals
+        usdc_amount_to_add = usdc_amount_to_add_wei / 10**6
+        wcbtc_amount_to_add = wcbtc_amount_to_add_wei / 10**18
+
+        console.print(f"[green]+ Fixed amounts for LP: {usdc_amount_to_add} USDC and {wcbtc_amount_to_add:.10f} WCBTC[/green]")
 
         if usdc_balance < usdc_amount_to_add_wei:
             console.print(f"[red]- Insufficient USDC balance. Needed: {usdc_amount_to_add} USDC, Have: {usdc_balance / 10**6:.6f} USDC[/red]")
             return
-
-        # Fetch pool reserves to determine WCBTC amount
-        try:
-            pool_contract = w3.eth.contract(address=config["satsuma_pool_address"], abi=ALGEBRA_POOL_ABI)
-            
-            token0_address = pool_contract.functions.token0().call()
-            token1_address = pool_contract.functions.token1().call()
-            reserves = pool_contract.functions.getReserves().call()
-
-            # Determine which reserve corresponds to USDC and WCBTC
-            if token0_address == config["usdc_address"] and token1_address == config["wcbtc_address"]:
-                reserve_usdc = reserves[0]
-                reserve_wcbtc = reserves[1]
-            elif token0_address == config["wcbtc_address"] and token1_address == config["usdc_address"]:
-                reserve_usdc = reserves[1]
-                reserve_wcbtc = reserves[0]
-            else:
-                console.print(f"[red]- Pool tokens mismatch. Expected USDC ({config['usdc_address']}) and WCBTC ({config['wcbtc_address']}), but found Token0: {token0_address}, Token1: {token1_address}. Aborting LP add.[/red]")
-                return
-
-            # Calculate required WCBTC based on 50:50 ratio of current pool
-            if reserve_usdc == 0 or reserve_wcbtc == 0:
-                console.print(f"[red]- One or both pool reserves are zero (USDC: {reserve_usdc}, WCBTC: {reserve_wcbtc}). Cannot calculate ratio. Aborting LP add.[/red]")
-                return
-
-            wcbtc_amount_to_add_float = (usdc_amount_to_add_wei * reserve_wcbtc) / reserve_usdc 
-            wcbtc_amount_to_add_wei = int(wcbtc_amount_to_add_float)
-
-            wcbtc_amount_to_add = wcbtc_amount_to_add_wei / (10**18)
-
-            console.print(f"[green]+ Raw Reserves: USDC={reserve_usdc}, WCBTC={reserve_wcbtc}[/green]")
-            console.print(f"[green]+ Calculated WCBTC needed for {usdc_amount_to_add} USDC: {wcbtc_amount_to_add:.18f} WCBTC (raw wei: {wcbtc_amount_to_add_wei})[/green]")
-
-            if wcbtc_amount_to_add_wei == 0:
-                console.print("[red]- Calculated WCBTC amount is zero. This might happen if the pool ratio is extremely skewed or the USDC amount is too small. Aborting LP add.[/red]")
-                return
-
-        except Exception as e:
-            console.print(f"[red]- Failed to fetch pool reserves or calculate ratio: {str(e)}. Please ensure 'satsuma_pool_address' is correct and the pool has liquidity. Aborting LP add.[/red]")
-            return
-
-        # Check WCBTC balance and offer to wrap cBTC
+        
         if wcbtc_balance < wcbtc_amount_to_add_wei:
-            missing_wcbtc = (wcbtc_amount_to_add_wei - wcbtc_balance) / (10**18)
+            missing_wcbtc = (wcbtc_amount_to_add_wei - wcbtc_balance) / 10**18
             console.print(f"[yellow]- Insufficient WCBTC balance. Missing: {missing_wcbtc:.10f} WCBTC[/yellow]")
             if cbtc_native_balance >= w3.to_wei(missing_wcbtc, 'ether'): # Check if native cBTC is enough
                 wrap_choice = console.input(f"[bold magenta]> Do you want to wrap {missing_wcbtc:.10f} cBTC to WCBTC? (yes/no): [/bold magenta]").lower()
@@ -788,8 +737,8 @@ async def add_lp_satsuma(w3, config, private_key):
                 console.print(f"[red]- Insufficient cBTC native balance to wrap. Have: {cbtc_native_balance / 10**18:.6f} cBTC. Aborting LP add.[/red]")
                 return
 
-        # Approve tokens to the NonfungiblePositionManager contract
-        console.print("[yellow]> Approving USDC and WCBTC for NonfungiblePositionManager...[/yellow]")
+        # Approve tokens to the LP manager contract (NonfungiblePositionManager)
+        console.print("[yellow]> Approving USDC and WCBTC for LP manager...[/yellow]")
         usdc_approval = await approve_token(w3, config, account, config["usdc_address"], config["satsuma_lp_reward_contract_address"], usdc_amount_to_add_wei)
         wcbtc_approval = await approve_token(w3, config, account, config["wcbtc_address"], config["satsuma_lp_reward_contract_address"], wcbtc_amount_to_add_wei)
         
@@ -797,83 +746,15 @@ async def add_lp_satsuma(w3, config, private_key):
             console.print("[red]- Token approval failed. Aborting liquidity add.[/red]")
             return
             
-        # Get NonfungiblePositionManager contract instance
-        nfpm_contract = w3.eth.contract(address=config["satsuma_lp_reward_contract_address"], abi=NONFUNGIBLE_POSITION_MANAGER_ABI)
-        deadline = int(time.time()) + 20 * 60 # 20 minutes
+        # Use the exact raw data for the multicall transaction
+        to_address = config["satsuma_lp_reward_contract_address"] # This is the NonfungiblePositionManager
+        # Data from your successful transaction: 0xac9650d8...
+        data_hex = "0xac9650d80000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000164fe3f3be700000000000000000000000036c16eac6b0ba6c50f494914ff015fca95b7835f0000000000000000000000008d0c9d1c17ae5e40fff9be350f57840e9e66cd930000000000000000000000000000000000000000000000000000000000000000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff2764c00000000000000000000000000000000000000000000000000000000000d89b400000000000000000000000000000000000000000000000000000000004c4b4000000000000000000000000000000000000000000000000000003a1e1f69cc72000000000000000000000000000000000000000000000000000039f8e17b7e3c00000000000000000000000007f8ec2b79b7a1998fd0b21a4668b0cf1ca72c02000000000000000000000000000000000000000000000000000001981a600ca200000000000000000000000000000000000000000000000000000000"
+        value_wei = 0x0 # Value is 0 for multicall
+        gas_limit = 0x90543 # Gas limit from your successful transaction
+        gas_price_wei = 0xb71b78 # Gas price from your successful transaction
 
-        # Get slippage tolerance from user
-        while True:
-            try:
-                slippage_percent_str = console.input("[bold magenta]> Enter slippage tolerance percentage (e.g., 0.5 for 0.5%): [/bold magenta]")
-                slippage_percent = float(slippage_percent_str)
-                if not (0 <= slippage_percent < 100): # Allow up to almost 100% for testnet if needed
-                    console.print("[red]- Slippage percentage must be between 0 and 100. Please enter a valid number.[/red]")
-                    continue
-                break
-            except ValueError:
-                console.print("[red]- Invalid input. Please enter a valid number.[/red]")
-        slippage_tolerance = slippage_percent / 100.0
-
-        amount_usdc_min = int(usdc_amount_to_add_wei * (1 - slippage_tolerance))
-        amount_wcbtc_min = int(wcbtc_amount_to_add_wei * (1 - slippage_tolerance))
-
-        console.print(f"[green]+ Adding {usdc_amount_to_add:.6f} USDC and {wcbtc_amount_to_add:.10f} WCBTC to LP.[/green]")
-        console.print(f"[green]+ Minimum amounts (with {slippage_percent}% slippage): USDC={amount_usdc_min / 10**6:.6f}, WCBTC={amount_wcbtc_min / 10**18:.10f}[/green]")
-
-        # --- Dynamically build the 'mint' call for the NonfungiblePositionManager ---
-        # Using fee_tier 3000 (0.3%) from your successful transaction analysis
-        # Using specific ticks from your successful transaction analysis
-        fee_tier = 3000 # Correct fee tier from your analysis (0.3%)
-        tick_lower = 0 # From your successful transaction's decoded data
-        tick_upper = 370720 # From your successful transaction's decoded data
-
-        mint_params = (
-            config["usdc_address"],
-            config["wcbtc_address"],
-            fee_tier,
-            tick_lower,
-            tick_upper,
-            usdc_amount_to_add_wei,
-            wcbtc_amount_to_add_wei,
-            amount_usdc_min,
-            amount_wcbtc_min,
-            account.address, # Recipient is the current bot's address
-            deadline
-        )
-
-        # Encode the 'mint' call
-        mint_call_data = nfpm_contract.functions.mint(mint_params)._encode_transaction_data()
-        
-        # --- Build the 'multicall' transaction with the encoded 'mint' call ---
-        # The 'multicall' function takes an array of bytes (each byte string is an encoded function call)
-        multicall_data_hex = nfpm_contract.functions.multicall([mint_call_data])._encode_transaction_data()
-        
-        # --- DEBUG PRINT: Check the generated data ---
-        # Ensure these are converted to string for printing if they are HexBytes objects
-        console.print(f"[cyan]DEBUG: Generated mint_call_data: {str(mint_call_data)}[/cyan]")
-        console.print(f"[cyan]DEBUG: Generated multicall_data_hex: {str(multicall_data_hex)}[/cyan]")
-        # --- END DEBUG PRINT ---
-
-        to_address_final = config["satsuma_lp_reward_contract_address"] # NonfungiblePositionManager
-        value_wei_final = 0 # multicall itself doesn't typically send value unless it's for a native token deposit within.
-
-        # Gas and GasPrice from your successful transaction for multicall
-        gas_limit_final = 0x90543 # Gas limit from your successful transaction
-        gas_price_wei_final = 0xb71b78 # Gas price from your successful transaction
-
-        console.print(f"[yellow]> Sending Add Liquidity (multicall with mint) transaction...[/yellow]")
-
-        result = await send_custom_transaction(
-            w3, 
-            config, 
-            account, 
-            to_address_final, 
-            multicall_data_hex, 
-            value_wei_final, 
-            gas_limit_final, 
-            gas_price_wei_final, 
-            "Add Liquidity (Dynamic)"
-        )
+        await send_custom_transaction(w3, config, account, to_address, data_hex, value_wei, gas_limit, gas_price_wei, "Add Liquidity (Fixed Amounts)")
                 
     except Exception as e: # Outer exception handler for add_lp_satsuma
         console.print(f"[red]- Error adding liquidity: {str(e)}[/red]")
@@ -882,6 +763,8 @@ async def add_lp_satsuma(w3, config, private_key):
 async def convert_suma_to_vesuma(w3, config, private_key):
     account = w3.eth.account.from_key(private_key)
     console.print(f"\n[blue]=== Converting SUMA to veSUMA for: {account.address} ===[/blue]")
+    console.print("[yellow]WARNING: This transaction uses hardcoded gas parameters and data. Transaction might fail if network conditions change.[/yellow]")
+
 
     # Transaction details from user's provided data
     to_address = config["vesuma_address"]
@@ -902,6 +785,8 @@ async def convert_suma_to_vesuma(w3, config, private_key):
 async def stake_vesuma(w3, config, private_key):
     account = w3.eth.account.from_key(private_key)
     console.print(f"\n[blue]=== Staking veSUMA for: {account.address} ===[/blue]")
+    console.print("[yellow]WARNING: This transaction uses hardcoded gas parameters and data. Transaction might fail if network conditions change.[/yellow]")
+
 
     # Transaction details from user's provided data
     to_address = config["staking_contract_address"]
@@ -922,6 +807,8 @@ async def stake_vesuma(w3, config, private_key):
 async def claim_lp_reward(w3, config, private_key):
     account = w3.eth.account.from_key(private_key)
     console.print(f"\n[blue]=== Claiming LP Reward for: {account.address} ===[/blue]")
+    console.print("[yellow]WARNING: This transaction uses hardcoded gas parameters and data. Transaction might fail if network conditions change.[/yellow]")
+
 
     # Transaction details from user's provided data
     to_address = config["satsuma_lp_reward_contract_address"]
@@ -938,6 +825,12 @@ async def run_all_features(w3, config, private_keys):
         account = w3.eth.account.from_key(private_key)
         console.print(f"\n[bold cyan]--- Processing all features for Account {i+1}: {account.address} ---[/bold cyan]")
 
+        # Crestapp Actions
+        await buy_btc_crestapp(w3, config, private_key)
+        await asyncio.sleep(random.uniform(10, 20)) # Delay between actions
+        await sell_btc_crestapp(w3, config, private_key)
+        await asyncio.sleep(random.uniform(10, 20))
+
         # Nectra Actions
         await borrow_nusd_with_cbtc(w3, config, private_key)
         await asyncio.sleep(random.uniform(10, 20)) # Delay between actions
@@ -945,8 +838,12 @@ async def run_all_features(w3, config, private_keys):
         await asyncio.sleep(random.uniform(10, 20))
 
         # Satsuma Actions
-        # Interactive swaps and LP add are not included in run_all_features
+        # Interactive swaps and LP add are not included in run_all_features as they require user input
         await swap_cbtc_to_nusd(w3, config, private_key)
+        await asyncio.sleep(random.uniform(10, 20))
+        # Note: add_lp_satsuma is included here as it uses fixed amounts, but it also has a wrap_cbtc sub-prompt
+        # which might be disruptive in an automated run. Consider pre-wrapping if this becomes an issue.
+        await add_lp_satsuma(w3, config, private_key) 
         await asyncio.sleep(random.uniform(10, 20))
         await convert_suma_to_vesuma(w3, config, private_key)
         await asyncio.sleep(random.uniform(10, 20))
@@ -977,14 +874,14 @@ async def main():
                 if option == 13: # Updated exit option
                     console.print("[yellow]> Exiting Satsuma & Nectra Bot...[/yellow]")
                     sys.exit(0)
-                elif option == 1:
+                elif option == 1: # BUY BTC (CRESTAPP)
                     for private_key in private_keys:
-                        await buy_btc_crest(w3, config, private_key)
-                        await asyncio.sleep(random.uniform(5, 10))
-                elif option == 2:
+                        await buy_btc_crestapp(w3, config, private_key)
+                        await asyncio.sleep(random.uniform(5, 10)) # Small delay between accounts
+                elif option == 2: # SELL BTC (CRESTAPP)
                     for private_key in private_keys:
-                        await sell_btc_crest(w3, config, private_key)
-                        await asyncio.sleep(random.uniform(5, 10))
+                        await sell_btc_crestapp(w3, config, private_key)
+                        await asyncio.sleep(random.uniform(5, 10)) # Small delay between accounts
                 elif option == 3:
                     for private_key in private_keys:
                         await borrow_nusd_with_cbtc(w3, config, private_key)
