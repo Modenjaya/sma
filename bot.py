@@ -113,7 +113,7 @@ def load_config():
         "usdc_address": Web3.to_checksum_address("0x36c16eaC6B0Ba6c50f494914ff015fCa95B7835F"),
         "wcbtc_address": Web3.to_checksum_address("0x8d0c9d1c17ae5e40fff9be350f57840e9e66cd93"),
         "nusd_address": Web3.to_checksum_address("0x9B28B690550522608890C3C7e63c0b4A7eBab9AA"),
-        "suma_address": Web3.to_checksum_address("0xdE4251dd68e1aD58656b14Dd527E54018767Af58a"), # Corrected from previous script to avoid conflict with USDC if it was intended.
+        "suma_address": Web3.to_checksum_address("0xdE4251dd68e1aD5865b14Dd527E54018767Af58a"), # CORRECTED SUMA ADDRESS
         "vesuma_address": Web3.to_checksum_address("0x97a4f684620D578312Dc9fFBc4b0EbD8E804ab4a"),
         
         # Staking and Voting Contracts (updated based on user's new data)
