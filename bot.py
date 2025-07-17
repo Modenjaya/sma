@@ -27,7 +27,8 @@ def display_banner():
 ██╔═██╗ ██║   ██║██║╚██╗██║   ██║   ██║   ██║██║     
 ██║  ██╗╚██████╔╝██║ ╚████║   ██║   ╚██████╔╝███████╗
 ╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═══╝   ╚═╝    ╚═════╝ ╚══════╝
-    """
+
+    """  # LU KONTOL in ASCII
     console.print(f"[bold cyan]{banner_text}[/bold cyan]", justify="center")
     console.print(f"[bold green]L E T S - F U C K - T H I S - T E S T N E T [/bold green]", justify="center")
     console.print("-" * 50, style="green", justify="center")
@@ -35,7 +36,7 @@ def display_banner():
         console.print(f"[yellow]> Initializing{'.' * (_ % 4)}[/yellow]", justify="center", end="\r")
         time.sleep(0.3)
     console.print(" " * 50, end="\r")
-    console.print(f"[green]+ CITREA TASK - CREATED BY MODEN[/green]", justify="center")
+    console.print(f"[green]+ Satsuma & Nectra Bot - CREATED BY Alloidn[/green]", justify="center")
     console.print("-" * 50, style="green", justify="center")
 
 # === CLI Menu ===
@@ -47,19 +48,20 @@ def display_menu():
         "1. Borrow NUSD with cBTC (Nectra)",
         "2. Deposit NUSD (Nectra)",
         "3. Swap cBTC/WCBTC to NUSD (Satsuma)",
-        "4. Add LP for USDC (Satsuma)",
-        "5. Convert SUMA to veSUMA (Satsuma)",
-        "6. Stake veSUMA (Satsuma)",
-        "7. Claim LP Reward (Satsuma)", # New option
-        "8. Run All Features",           # New option
-        "9. Exit"
+        "4. Swap USDC to SUMA (Satsuma) - Interactive", # New option
+        "5. Add LP for USDC (Satsuma)",
+        "6. Convert SUMA to veSUMA (Satsuma)",
+        "7. Stake veSUMA (Satsuma)",
+        "8. Claim LP Reward (Satsuma)",
+        "9. Run All Features",
+        "10. Exit"
     ]
     
     for opt in options:
         table.add_row(opt)
     
     console.print(table)
-    choice = console.input("[bold magenta]> Select option (1-9): [/bold magenta]")
+    choice = console.input("[bold magenta]> Select option (1-10): [/bold magenta]")
     return choice
 
 # Load or initialize user settings (from previous script, adapted)
@@ -111,7 +113,7 @@ def load_config():
         "usdc_address": Web3.to_checksum_address("0x36c16eaC6B0Ba6c50f494914ff015fCa95B7835F"),
         "wcbtc_address": Web3.to_checksum_address("0x8d0c9d1c17ae5e40fff9be350f57840e9e66cd93"),
         "nusd_address": Web3.to_checksum_address("0x9B28B690550522608890C3C7e63c0b4A7eBab9AA"),
-        "suma_address": Web3.to_checksum_address("0xdE4251dd68e1aD5865b14Dd527E54018767Af58a"), # Using address from previous script due to user's provided SUMA address being same as USDC.
+        "suma_address": Web3.to_checksum_address("0xdE4251dd68e1aD5865b14Dd527E54018767Af58a"), # Using address from previous script because user's provided SUMA address was same as USDC.
         "vesuma_address": Web3.to_checksum_address("0x97a4f684620D578312Dc9fFBc4b0EbD8E804ab4a"),
         
         # Staking and Voting Contracts (updated based on user's new data)
@@ -186,6 +188,88 @@ ERC20_ABI = [
         ],
         "name": "allowance",
         "outputs": [{"name": "", "type": "uint256"}],
+        "type": "function"
+    }
+]
+
+# Swap Router ABI (re-added)
+SWAP_ROUTER_ABI = [
+    {
+        "inputs": [
+            {
+                "components": [
+                    {"name": "tokenIn", "type": "address"},
+                    {"name": "tokenOut", "type": "address"},
+                    {"name": "deployer", "type": "address"},
+                    {"name": "recipient", "type": "address"},
+                    {"name": "deadline", "type": "uint256"},
+                    {"name": "amountIn", "type": "uint256"},
+                    {"name": "amountOutMinimum", "type": "uint256"},
+                    {"name": "limitSqrtPrice", "type": "uint160"}
+                ],
+                "name": "params",
+                "type": "tuple"
+            }
+        ],
+        "name": "exactInputSingle",
+        "outputs": [{"name": "amountOut", "type": "uint256"}],
+        "stateMutability": "payable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {"name": "tokenA", "type": "address"},
+            {"name": "tokenB", "type": "address"},
+            {"name": "deployer", "type": "address"},
+            {"name": "recipient", "type": "address"},
+            {"name": "amountADesired", "type": "uint256"},
+            {"name": "amountBDesired", "type": "uint256"},
+            {"name": "amountAMin", "type": "uint256"},
+            {"name": "amountBMin", "type": "uint256"},
+            {"name": "deadline", "type": "uint256"}
+        ],
+        "name": "addLiquidity",
+        "outputs": [
+            {"name": "amountA", "type": "uint256"},
+            {"name": "amountB", "type": "uint256"},
+            {"name": "liquidity", "type": "uint128"}
+        ],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    }
+]
+
+# Algebra Pool ABI (re-added)
+ALGEBRA_POOL_ABI = [
+    {
+        "constant": True,
+        "inputs": [],
+        "name": "getReserves",
+        "outputs": [
+            {"name": "", "type": "uint128"},
+            {"name": "", "type": "uint128"}
+        ],
+        "type": "function"
+    },
+    {
+        "constant": True,
+        "inputs": [],
+        "name": "token0",
+        "outputs": [{"name": "", "type": "address"}],
+        "type": "function"
+    },
+    {
+        "constant": True,
+        "inputs": [],
+        "name": "token1",
+        "outputs": [{"name": "", "type": "address"}],
+        "type": "function"
+    },
+    {
+        "constant": True,
+        "inputs": [],
+        "name": "factory",
+        "outputs": [{"name": "", "type": "address"}],
         "type": "function"
     }
 ]
@@ -281,12 +365,14 @@ async def approve_token(w3, config, account, token_address, spender_address, amo
         token_contract = w3.eth.contract(address=token_address, abi=ERC20_ABI)
         
         allowance = token_contract.functions.allowance(account.address, spender_address).call()
+        # Use 10**6 for USDC and 10**18 for other tokens for correct comparison
+        token_decimals = 6 if token_address == config['usdc_address'] else 18
         if allowance >= amount:
-            console.print(f"[green]+ Sufficient token allowance ({allowance / (10**18 if token_address != config['usdc_address'] else 10**6):.6f}) already exists for {token_address} to {spender_address}[/green]")
+            console.print(f"[green]+ Sufficient token allowance ({allowance / (10**token_decimals):.6f}) already exists for {token_address} to {spender_address}[/green]")
             return {"success": True}
 
         nonce = w3.eth.get_transaction_count(account.address)
-        console.print(f"[yellow]> Approving {amount / (10**18 if token_address != config['usdc_address'] else 10**6):.6f} token {token_address} for {spender_address} with nonce {nonce}[/yellow]")
+        console.print(f"[yellow]> Approving {amount / (10**token_decimals):.6f} token {token_address} for {spender_address} with nonce {nonce}[/yellow]")
 
         approve_tx = token_contract.functions.approve(spender_address, amount).build_transaction({
             "from": account.address,
@@ -366,6 +452,88 @@ async def swap_cbtc_to_nusd(w3, config, private_key):
         return
 
     await send_custom_transaction(w3, config, account, to_address, data_hex, value_wei, gas_limit, gas_price_wei, "Swap cBTC/WCBTC to NUSD")
+
+async def swap_usdc_to_suma_interactive(w3, config, private_key):
+    try:
+        account = w3.eth.account.from_key(private_key)
+        console.print(f"[blue]=== Processing interactive USDC to SUMA swap for address: {account.address} ===[/blue]")
+
+        while True:
+            try:
+                usdc_amount_str = console.input("[bold magenta]> Enter the amount of USDC to swap (e.g., 10.5): [/bold magenta]")
+                usdc_amount = float(usdc_amount_str)
+                if usdc_amount <= 0:
+                    console.print("[red]- Amount must be positive. Please enter a valid number.[/red]")
+                    continue
+                break
+            except ValueError:
+                console.print("[red]- Invalid input. Please enter a valid number.[/red]")
+
+        console.print(f"[green]+ Amount to swap: {usdc_amount} USDC[/green]")
+
+        usdc_contract = w3.eth.contract(address=config["usdc_address"], abi=ERC20_ABI)
+        suma_contract = w3.eth.contract(address=config["suma_address"], abi=ERC20_ABI)
+
+        usdc_balance = usdc_contract.functions.balanceOf(account.address).call()
+        console.print(f"[green]+ Current USDC balance: {usdc_balance / 10**6:.6f} USDC[/green]")
+
+        amount_in_usdc_wei = int(usdc_amount * 10**6) # USDC has 6 decimals
+        if usdc_balance < amount_in_usdc_wei:
+            console.print(f"[red]- Insufficient USDC balance. Needed: {usdc_amount} USDC, Available: {usdc_balance / 10**6:.6f} USDC[/red]")
+            return
+
+        # Approve USDC for the swap router
+        approval_result = await approve_token(w3, config, account, config["usdc_address"], config["satsuma_swap_router_address"], amount_in_usdc_wei)
+        if not approval_result["success"]:
+            console.print("[red]- Skipping swap due to USDC approval failure[/red]")
+            return
+
+        swap_router = w3.eth.contract(address=config["satsuma_swap_router_address"], abi=SWAP_ROUTER_ABI)
+        deadline = int(time.time()) + 20 * 60 # 20 minutes from now
+
+        # Parameters for exactInputSingle (USDC to SUMA)
+        # Using the structure from the provided transaction data, but with dynamic amountIn
+        params_usdc_suma = (
+            config["usdc_address"], # tokenIn
+            config["suma_address"], # tokenOut
+            Web3.to_checksum_address("0x0000000000000000000000000000000000000000"), # deployer (as per user's data)
+            account.address, # recipient
+            deadline,
+            amount_in_usdc_wei, # dynamic amount from user input
+            0, # amountOutMinimum (set to 0 for simplicity, consider adding slippage)
+            0  # limitSqrtPrice (set to 0 for simplicity)
+        )
+
+        console.print("[yellow]> Sending USDC -> SUMA transaction...[/yellow]")
+        usdc_suma_tx = swap_router.functions.exactInputSingle(params_usdc_suma).build_transaction({
+            "from": account.address,
+            "value": 0, # Value is 0x0 as per user's provided data
+            "gas": 0x1e8480, # Fixed gas limit from user's provided data
+            "gasPrice": 0xb71b78, # Fixed gas price from user's provided data
+            "nonce": w3.eth.get_transaction_count(account.address),
+            "chainId": config["chain_id"]
+        })
+
+        signed_tx = w3.eth.account.sign_transaction(usdc_suma_tx, private_key=account.key)
+        tx_hash = w3.eth.send_raw_transaction(signed_tx.raw_transaction)
+        console.print("[yellow]> Waiting for USDC -> SUMA transaction confirmation...[/yellow]")
+        receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
+
+        if receipt["status"] == 1:
+            console.print(f"[green]+ USDC -> SUMA swap successful! Tx: {config['explorer']}/tx/{tx_hash.hex()}[/green]")
+        else:
+            console.print(f"[red]- USDC -> SUMA transaction failed! Tx: {config['explorer']}/tx/{tx_hash.hex()}[/red]")
+            console.print(f"[cyan]Transaction receipt: {receipt}[/cyan]")
+            return
+
+        # Display SUMA received and veSUMA note
+        suma_balance_after_swap = suma_contract.functions.balanceOf(account.address).call()
+        console.print(f"[green]+ Current SUMA balance: {suma_balance_after_swap / 10**18:.6f} SUMA[/green]")
+        console.print(f"[yellow]Note: To get veSUMA, you need to convert your SUMA using the 'Convert SUMA to veSUMA' option.[/yellow]")
+
+    except Exception as e:
+        console.print(f"[red]- Error during USDC to SUMA swap: {str(e)}[/red]")
+
 
 async def add_lp_satsuma(w3, config, private_key):
     account = w3.eth.account.from_key(private_key)
@@ -453,6 +621,7 @@ async def run_all_features(w3, config, private_keys):
         await asyncio.sleep(random.uniform(10, 20))
 
         # Satsuma Actions
+        # swap_usdc_to_suma_interactive is not included because it requires user input
         await swap_cbtc_to_nusd(w3, config, private_key)
         await asyncio.sleep(random.uniform(10, 20))
         await add_lp_satsuma(w3, config, private_key)
@@ -483,7 +652,7 @@ async def main():
             choice = display_menu()
             try:
                 option = int(choice)
-                if option == 9: # Updated exit option
+                if option == 10: # Updated exit option
                     console.print("[yellow]> Exiting Satsuma & Nectra Bot...[/yellow]")
                     sys.exit(0)
                 elif option == 1:
@@ -498,26 +667,30 @@ async def main():
                     for private_key in private_keys:
                         await swap_cbtc_to_nusd(w3, config, private_key)
                         await asyncio.sleep(random.uniform(5, 10))
-                elif option == 4:
+                elif option == 4: # New option for Interactive USDC to SUMA Swap
                     for private_key in private_keys:
-                        await add_lp_satsuma(w3, config, private_key)
+                        await swap_usdc_to_suma_interactive(w3, config, private_key)
                         await asyncio.sleep(random.uniform(5, 10))
                 elif option == 5:
                     for private_key in private_keys:
-                        await convert_suma_to_vesuma(w3, config, private_key)
+                        await add_lp_satsuma(w3, config, private_key)
                         await asyncio.sleep(random.uniform(5, 10))
                 elif option == 6:
                     for private_key in private_keys:
+                        await convert_suma_to_vesuma(w3, config, private_key)
+                        await asyncio.sleep(random.uniform(5, 10))
+                elif option == 7:
+                    for private_key in private_keys:
                         await stake_vesuma(w3, config, private_key)
                         await asyncio.sleep(random.uniform(5, 10))
-                elif option == 7: # New option for Claim LP Reward
+                elif option == 8: # Option for Claim LP Reward
                     for private_key in private_keys:
                         await claim_lp_reward(w3, config, private_key)
                         await asyncio.sleep(random.uniform(5, 10))
-                elif option == 8: # New option for Run All Features
+                elif option == 9: # Option for Run All Features
                     await run_all_features(w3, config, private_keys)
                 else:
-                    console.print("[red]- Invalid option. Please select 1-9.[/red]")
+                    console.print("[red]- Invalid option. Please select 1-10.[/red]")
             except ValueError:
                 console.print("[red]- Invalid input. Please enter a number.[/red]")
             except Exception as e:
