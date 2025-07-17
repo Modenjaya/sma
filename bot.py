@@ -49,7 +49,7 @@ def display_menu():
         "3. Swap cBTC (Citrea Native) to NUSD (Satsuma)",
         "4. Swap USDC to SUMA (Satsuma) - Interactive",
         "5. Swap USDC to WCBTC (Satsuma) - Interactive",
-        "6. Add Liquidity (WCBTC + USDC) (Satsuma) - Fixed Raw Data", # Updated option text
+        "6. Add Liquidity (WCBTC + USDC) (Satsuma) - Dynamic", # Updated option text
         "7. Convert SUMA to veSUMA (Satsuma)",
         "8. Stake veSUMA (Satsuma)",
         "9. Claim LP Reward (Satsuma)",
@@ -685,8 +685,8 @@ async def add_lp_satsuma(w3, config, private_key):
     try: # Outer try block for the entire function
         account = w3.eth.account.from_key(private_key)
         console.print(f"\n[blue]=== Adding Liquidity (WCBTC + USDC) for: {account.address} ===[/blue]")
-        console.print("[yellow]Note: This function uses fixed amounts (5 USDC and ~0.000064 WCBTC) and specific ticks from provided transaction data. LP tokens will be minted to your wallet.[/yellow]")
-        console.print("[red bold]WARNING: This method is highly fragile and relies on exact byte offsets. Any change in contract ABI or parameters may break it.[/red bold]")
+        console.print("[yellow]Note: This function dynamically calculates amounts and mints LP tokens to your wallet.[/yellow]")
+        console.print("[red bold]WARNING: This method is highly fragile and relies on exact byte offsets for tick ranges. Any change in contract ABI or parameters may break it.[/red bold]")
 
         usdc_contract = w3.eth.contract(address=config["usdc_address"], abi=ERC20_ABI)
         wcbtc_contract = w3.eth.contract(address=config["wcbtc_address"], abi=ERC20_ABI)
@@ -700,21 +700,66 @@ async def add_lp_satsuma(w3, config, private_key):
         console.print(f"[green]+ Current WCBTC Balance: {wcbtc_balance / 10**18:.6f} WCBTC[/green]")
         console.print(f"[green]+ Current Native cBTC Balance: {cbtc_native_balance / 10**18:.6f} cBTC[/green]")
 
-        # Fixed amounts from the provided successful transaction data
-        usdc_amount_to_add_wei = 5 * (10**6) # 5 USDC
-        wcbtc_amount_to_add_wei = 64203400000000 # 0.0000642034 WCBTC (from your provided data)
+        while True:
+            try:
+                usdc_amount_to_add_str = console.input("[bold magenta]> Enter the amount of USDC to add to LP (e.g., 5.0): [/bold magenta]")
+                usdc_amount_to_add = float(usdc_amount_to_add_str)
+                if usdc_amount_to_add <= 0:
+                    console.print("[red]- Amount must be positive. Please enter a valid number.[/red]")
+                    continue
+                break
+            except ValueError:
+                console.print("[red]- Invalid input. Please enter a valid number.[/red]")
 
-        usdc_amount_to_add = usdc_amount_to_add_wei / 10**6
-        wcbtc_amount_to_add = wcbtc_amount_to_add_wei / 10**18
-
-        console.print(f"[green]+ Fixed amounts for LP: {usdc_amount_to_add} USDC and {wcbtc_amount_to_add:.10f} WCBTC[/green]")
+        usdc_amount_to_add_wei = int(usdc_amount_to_add * (10**6)) # USDC has 6 decimals
 
         if usdc_balance < usdc_amount_to_add_wei:
             console.print(f"[red]- Insufficient USDC balance. Needed: {usdc_amount_to_add} USDC, Have: {usdc_balance / 10**6:.6f} USDC[/red]")
             return
-        
+
+        # Fetch pool reserves to determine WCBTC amount
+        try:
+            pool_contract = w3.eth.contract(address=config["satsuma_pool_address"], abi=ALGEBRA_POOL_ABI)
+            
+            token0_address = pool_contract.functions.token0().call()
+            token1_address = pool_contract.functions.token1().call()
+            reserves = pool_contract.functions.getReserves().call()
+
+            # Determine which reserve corresponds to USDC and WCBTC
+            if token0_address == config["usdc_address"] and token1_address == config["wcbtc_address"]:
+                reserve_usdc = reserves[0]
+                reserve_wcbtc = reserves[1]
+            elif token0_address == config["wcbtc_address"] and token1_address == config["usdc_address"]:
+                reserve_usdc = reserves[1]
+                reserve_wcbtc = reserves[0]
+            else:
+                console.print(f"[red]- Pool tokens mismatch. Expected USDC ({config['usdc_address']}) and WCBTC ({config['wcbtc_address']}), but found Token0: {token0_address}, Token1: {token1_address}. Aborting LP add.[/red]")
+                return
+
+            # Calculate required WCBTC based on 50:50 ratio of current pool
+            if reserve_usdc == 0 or reserve_wcbtc == 0:
+                console.print(f"[red]- One or both pool reserves are zero (USDC: {reserve_usdc}, WCBTC: {reserve_wcbtc}). Cannot calculate ratio. Aborting LP add.[/red]")
+                return
+
+            wcbtc_amount_to_add_float = (usdc_amount_to_add_wei * reserve_wcbtc) / reserve_usdc 
+            wcbtc_amount_to_add_wei = int(wcbtc_amount_to_add_float)
+
+            wcbtc_amount_to_add = wcbtc_amount_to_add_wei / (10**18)
+
+            console.print(f"[green]+ Raw Reserves: USDC={reserve_usdc}, WCBTC={reserve_wcbtc}[/green]")
+            console.print(f"[green]+ Calculated WCBTC needed for {usdc_amount_to_add} USDC: {wcbtc_amount_to_add:.18f} WCBTC (raw wei: {wcbtc_amount_to_add_wei})[/green]")
+
+            if wcbtc_amount_to_add_wei == 0:
+                console.print("[red]- Calculated WCBTC amount is zero. This might happen if the pool ratio is extremely skewed or the USDC amount is too small. Aborting LP add.[/red]")
+                return
+
+        except Exception as e:
+            console.print(f"[red]- Failed to fetch pool reserves or calculate ratio: {str(e)}. Please ensure 'satsuma_pool_address' is correct and the pool has liquidity. Aborting LP add.[/red]")
+            return
+
+        # Check WCBTC balance and offer to wrap cBTC
         if wcbtc_balance < wcbtc_amount_to_add_wei:
-            missing_wcbtc = (wcbtc_amount_to_add_wei - wcbtc_balance) / 10**18
+            missing_wcbtc = (wcbtc_amount_to_add_wei - wcbtc_balance) / (10**18)
             console.print(f"[yellow]- Insufficient WCBTC balance. Missing: {missing_wcbtc:.10f} WCBTC[/yellow]")
             if cbtc_native_balance >= w3.to_wei(missing_wcbtc, 'ether'): # Check if native cBTC is enough
                 wrap_choice = console.input(f"[bold magenta]> Do you want to wrap {missing_wcbtc:.10f} cBTC to WCBTC? (yes/no): [/bold magenta]").lower()
@@ -745,33 +790,62 @@ async def add_lp_satsuma(w3, config, private_key):
             console.print("[red]- Token approval failed. Aborting liquidity add.[/red]")
             return
             
-        # --- RAW DATA MANIPULATION ---
-        # The original raw data from your successful transaction:
-        original_raw_data = "0xac9650d80000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000164fe3f3be700000000000000000000000036c16eac6b0ba6c50f494914ff015fca95b7835f0000000000000000000000008d0c9d1c17ae5e40fff9be350f57840e9e66cd930000000000000000000000000000000000000000000000000000000000000000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff2764c00000000000000000000000000000000000000000000000000000000000d89b400000000000000000000000000000000000000000000000000000000004c4b4000000000000000000000000000000000000000000000000000003a1e1f69cc7200000000000000000000000000000000000000000000000000000000004c1a9b000000000000000000000000000000000000000000000000000039f8e17b7e3c00000000000000000000000007f8ec2b79b7a1998fd0b21a4668b0cf1ca72c02000000000000000000000000000000000000000000000000000001981a600ca200000000000000000000000000000000000000000000000000000000"
+        # Get NonfungiblePositionManager contract instance
+        nfpm_contract = w3.eth.contract(address=config["satsuma_lp_reward_contract_address"], abi=NONFUNGIBLE_POSITION_MANAGER_ABI)
+        deadline = int(time.time()) + 20 * 60 # 20 minutes
 
-        # The address to replace in the raw data (without 0x prefix)
-        old_recipient_address_in_data = "07f8ec2b79b7a1998fd0b21a4668b0cf1ca72c02"
-        
-        # The new recipient address (your current account address, without 0x prefix)
-        new_recipient_address_in_data = account.address[2:].lower() # Convert to lowercase for hex comparison
+        # Get slippage tolerance from user
+        while True:
+            try:
+                slippage_percent_str = console.input("[bold magenta]> Enter slippage tolerance percentage (e.g., 0.5 for 0.5%): [/bold magenta]")
+                slippage_percent = float(slippage_percent_str)
+                if not (0 <= slippage_percent < 100): # Allow up to almost 100% for testnet if needed
+                    console.print("[red]- Slippage percentage must be between 0 and 100. Please enter a valid number.[/red]")
+                    continue
+                break
+            except ValueError:
+                console.print("[red]- Invalid input. Please enter a valid number.[/red]")
+        slippage_tolerance = slippage_percent / 100.0
 
-        # Find the starting index of the old recipient address in the raw data string
-        # We need to skip the "0x" prefix of the raw data string
-        start_index = original_raw_data.find(old_recipient_address_in_data)
+        amount_usdc_min = int(usdc_amount_to_add_wei * (1 - slippage_tolerance))
+        amount_wcbtc_min = int(wcbtc_amount_to_add_wei * (1 - slippage_tolerance))
 
-        if start_index == -1:
-            console.print(f"[red]- Error: Old recipient address '{old_recipient_address_in_data}' not found in the provided raw data. Aborting LP add.[/red]")
-            return
+        console.print(f"[green]+ Adding {usdc_amount_to_add:.6f} USDC and {wcbtc_amount_to_add:.10f} WCBTC to LP.[/green]")
+        console.print(f"[green]+ Minimum amounts (with {slippage_percent}% slippage): USDC={amount_usdc_min / 10**6:.6f}, WCBTC={amount_wcbtc_min / 10**18:.10f}[/green]")
 
-        # Replace the old address with the new one
-        modified_raw_data = (
-            original_raw_data[:start_index] + 
-            new_recipient_address_in_data + 
-            original_raw_data[start_index + len(old_recipient_address_in_data):]
+        # --- Dynamically build the 'mint' call for the NonfungiblePositionManager ---
+        # Using fee_tier 3000 (0.3%) from your successful transaction analysis
+        # Using specific ticks from your successful transaction analysis
+        fee_tier = 3000 # Correct fee tier from your analysis (0.3%)
+        tick_lower = 0 # From your successful transaction's decoded data
+        tick_upper = 370720 # From your successful transaction's decoded data
+
+        mint_params = (
+            config["usdc_address"],
+            config["wcbtc_address"],
+            fee_tier,
+            tick_lower,
+            tick_upper,
+            usdc_amount_to_add_wei,
+            wcbtc_amount_to_add_wei,
+            amount_usdc_min,
+            amount_wcbtc_min,
+            account.address, # Recipient is the current bot's address
+            deadline
         )
 
-        console.print(f"[cyan]DEBUG: Original raw data (partial): ...{original_raw_data[start_index-10:start_index+len(old_recipient_address_in_data)+10]}...[/cyan]")
-        console.print(f"[cyan]DEBUG: Modified raw data (partial): ...{modified_raw_data[start_index-10:start_index+len(new_recipient_address_in_data)+10]}...[/cyan]")
+        # Encode the 'mint' call
+        mint_call_data = nfpm_contract.functions.mint(mint_params)._encode_transaction_data()
+        
+        # --- Build the 'multicall' transaction with the encoded 'mint' call ---
+        # The 'multicall' function takes an array of bytes (each byte string is an encoded function call)
+        multicall_data_hex = nfpm_contract.functions.multicall([mint_call_data])._encode_transaction_data()
+        
+        # --- DEBUG PRINT: Check the generated data ---
+        # Ensure these are converted to string for printing if they are HexBytes objects
+        console.print(f"[cyan]DEBUG: Generated mint_call_data: {str(mint_call_data)}[/cyan]")
+        console.print(f"[cyan]DEBUG: Generated multicall_data_hex: {str(multicall_data_hex)}[/cyan]")
+        # --- END DEBUG PRINT ---
 
         to_address_final = config["satsuma_lp_reward_contract_address"] # NonfungiblePositionManager
         value_wei_final = 0 # multicall itself doesn't typically send value unless it's for a native token deposit within.
@@ -780,18 +854,18 @@ async def add_lp_satsuma(w3, config, private_key):
         gas_limit_final = 0x90543 # Gas limit from your successful transaction
         gas_price_wei_final = 0xb71b78 # Gas price from your successful transaction
 
-        console.print(f"[yellow]> Sending Add Liquidity (raw data modified) transaction...[/yellow]")
+        console.print(f"[yellow]> Sending Add Liquidity (multicall with mint) transaction...[/yellow]")
 
         result = await send_custom_transaction(
             w3, 
             config, 
             account, 
             to_address_final, 
-            modified_raw_data, # Use the modified raw data
+            multicall_data_hex, 
             value_wei_final, 
             gas_limit_final, 
             gas_price_wei_final, 
-            "Add Liquidity (Raw Data Modified)"
+            "Add Liquidity (Dynamic)"
         )
                 
     except Exception as e: # Outer exception handler for add_lp_satsuma
