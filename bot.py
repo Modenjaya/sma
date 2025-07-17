@@ -450,23 +450,10 @@ async def swap_cbtc_to_nusd(w3, config, private_key):
 
     await send_custom_transaction(w3, config, account, to_address, data_hex, value_wei, gas_limit, gas_price_wei, "Swap cBTC to NUSD")
 
-async def swap_usdc_to_suma_interactive(w3, config, private_key):
+async def swap_usdc_to_suma_interactive(w3, config, private_key, usdc_amount):
     try:
         account = w3.eth.account.from_key(private_key)
-        console.print(f"[blue]=== Processing interactive USDC to SUMA swap for address: {account.address} ===[/blue]")
-
-        while True:
-            try:
-                usdc_amount_str = console.input("[bold magenta]> Enter the amount of USDC to swap (e.g., 10.5): [/bold magenta]")
-                usdc_amount = float(usdc_amount_str)
-                if usdc_amount <= 0:
-                    console.print("[red]- Amount must be positive. Please enter a valid number.[/red]")
-                    continue
-                break
-            except ValueError:
-                console.print("[red]- Invalid input. Please enter a valid number.[/red]")
-
-        console.print(f"[green]+ Amount to swap: {usdc_amount} USDC[/green]")
+        console.print(f"[blue]=== Processing USDC to SUMA swap for address: {account.address} with {usdc_amount} USDC ===[/blue]")
 
         usdc_contract = w3.eth.contract(address=config["usdc_address"], abi=ERC20_ABI)
         suma_contract = w3.eth.contract(address=config["suma_address"], abi=ERC20_ABI)
@@ -476,20 +463,19 @@ async def swap_usdc_to_suma_interactive(w3, config, private_key):
 
         amount_in_usdc_wei = int(usdc_amount * 10**6) # USDC has 6 decimals
         if usdc_balance < amount_in_usdc_wei:
-            console.print(f"[red]- Insufficient USDC balance. Needed: {usdc_amount} USDC, Available: {usdc_balance / 10**6:.6f} USDC[/red]")
+            console.print(f"[red]- Insufficient USDC balance for {account.address}. Needed: {usdc_amount} USDC, Available: {usdc_balance / 10**6:.6f} USDC[/red]")
             return
 
         # Approve USDC for the swap router
         approval_result = await approve_token(w3, config, account, config["usdc_address"], config["satsuma_swap_router_address"], amount_in_usdc_wei)
         if not approval_result["success"]:
-            console.print("[red]- Skipping swap due to USDC approval failure[/red]")
+            console.print(f"[red]- Skipping swap for {account.address} due to USDC approval failure[/red]")
             return
 
         swap_router = w3.eth.contract(address=config["satsuma_swap_router_address"], abi=SWAP_ROUTER_ABI)
         deadline = int(time.time()) + 20 * 60 # 20 minutes from now
 
         # Parameters for exactInputSingle (USDC to SUMA)
-        # Using the structure from the provided transaction data, but with dynamic amountIn
         params_usdc_suma = (
             config["usdc_address"], # tokenIn
             config["suma_address"], # tokenOut
@@ -501,7 +487,7 @@ async def swap_usdc_to_suma_interactive(w3, config, private_key):
             0  # limitSqrtPrice (set to 0 for simplicity)
         )
 
-        console.print("[yellow]> Sending USDC -> SUMA transaction...[/yellow]")
+        console.print(f"[yellow]> Sending USDC -> SUMA transaction for {account.address}...[/yellow]")
         usdc_suma_tx = swap_router.functions.exactInputSingle(params_usdc_suma).build_transaction({
             "from": account.address,
             "value": 0, # Value is 0x0 as per user's provided data
@@ -513,41 +499,28 @@ async def swap_usdc_to_suma_interactive(w3, config, private_key):
 
         signed_tx = w3.eth.account.sign_transaction(usdc_suma_tx, private_key=account.key)
         tx_hash = w3.eth.send_raw_transaction(signed_tx.raw_transaction)
-        console.print("[yellow]> Waiting for USDC -> SUMA transaction confirmation...[/yellow]")
+        console.print(f"[yellow]> Waiting for USDC -> SUMA transaction confirmation for {account.address}...[/yellow]")
         receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
 
         if receipt["status"] == 1:
-            console.print(f"[green]+ USDC -> SUMA swap successful! Tx: {config['explorer']}/tx/{tx_hash.hex()}[/green]")
+            console.print(f"[green]+ USDC -> SUMA swap successful for {account.address}! Tx: {config['explorer']}/tx/{tx_hash.hex()}[/green]")
         else:
-            console.print(f"[red]- USDC -> SUMA transaction failed! Tx: {config['explorer']}/tx/{tx_hash.hex()}[/red]")
-            console.print(f"[cyan]Transaction receipt: {receipt}[/cyan]")
+            console.print(f"[red]- USDC -> SUMA transaction failed for {account.address}! Tx: {config['explorer']}/tx/{tx_hash.hex()}[/red]")
+            console.print(f"[cyan]Transaction receipt for {account.address}: {receipt}[/cyan]")
             return
 
         # Display SUMA received and veSUMA note
         suma_balance_after_swap = suma_contract.functions.balanceOf(account.address).call()
-        console.print(f"[green]+ Current SUMA balance: {suma_balance_after_swap / 10**18:.6f} SUMA[/green]")
-        console.print(f"[yellow]Note: To get veSUMA, you need to convert your SUMA using the 'Convert SUMA to veSUMA' option.[/yellow]")
+        console.print(f"[green]+ Current SUMA balance for {account.address}: {suma_balance_after_swap / 10**18:.6f} SUMA[/green]")
+        console.print(f"[yellow]Note for {account.address}: To get veSUMA, you need to convert your SUMA using the 'Convert SUMA to veSUMA' option.[/yellow]")
 
     except Exception as e:
-        console.print(f"[red]- Error during USDC to SUMA swap: {str(e)}[/red]")
+        console.print(f"[red]- Error during USDC to SUMA swap for {account.address}: {str(e)}[/red]")
 
-async def swap_usdc_to_wcbtc_interactive(w3, config, private_key):
+async def swap_usdc_to_wcbtc_interactive(w3, config, private_key, usdc_amount):
     try:
         account = w3.eth.account.from_key(private_key)
-        console.print(f"[blue]=== Processing interactive USDC to WCBTC swap for address: {account.address} ===[/blue]")
-
-        while True:
-            try:
-                usdc_amount_str = console.input("[bold magenta]> Enter the amount of USDC to swap (e.g., 10.0): [/bold magenta]")
-                usdc_amount = float(usdc_amount_str)
-                if usdc_amount <= 0:
-                    console.print("[red]- Amount must be positive. Please enter a valid number.[/red]")
-                    continue
-                break
-            except ValueError:
-                console.print("[red]- Invalid input. Please enter a valid number.[/red]")
-
-        console.print(f"[green]+ Amount to swap: {usdc_amount} USDC[/green]")
+        console.print(f"[blue]=== Processing USDC to WCBTC swap for address: {account.address} with {usdc_amount} USDC ===[/blue]")
 
         usdc_contract = w3.eth.contract(address=config["usdc_address"], abi=ERC20_ABI)
         wcbtc_contract = w3.eth.contract(address=config["wcbtc_address"], abi=ERC20_ABI)
@@ -557,13 +530,13 @@ async def swap_usdc_to_wcbtc_interactive(w3, config, private_key):
 
         amount_in_usdc_wei = int(usdc_amount * 10**6) # USDC has 6 decimals
         if usdc_balance < amount_in_usdc_wei:
-            console.print(f"[red]- Insufficient USDC balance. Needed: {usdc_amount} USDC, Available: {usdc_balance / 10**6:.6f} USDC[/red]")
+            console.print(f"[red]- Insufficient USDC balance for {account.address}. Needed: {usdc_amount} USDC, Available: {usdc_balance / 10**6:.6f} USDC[/red]")
             return
 
         # Approve USDC for the swap router
         approval_result = await approve_token(w3, config, account, config["usdc_address"], config["satsuma_swap_router_address"], amount_in_usdc_wei)
         if not approval_result["success"]:
-            console.print("[red]- Skipping swap due to USDC approval failure[/red]")
+            console.print(f"[red]- Skipping swap for {account.address} due to USDC approval failure[/red]")
             return
 
         swap_router = w3.eth.contract(address=config["satsuma_swap_router_address"], abi=SWAP_ROUTER_ABI)
@@ -581,7 +554,7 @@ async def swap_usdc_to_wcbtc_interactive(w3, config, private_key):
             0  # limitSqrtPrice (set to 0 for simplicity)
         )
 
-        console.print("[yellow]> Sending USDC -> WCBTC transaction...[/yellow]")
+        console.print(f"[yellow]> Sending USDC -> WCBTC transaction for {account.address}...[/yellow]")
         usdc_wcbtc_tx = swap_router.functions.exactInputSingle(params_usdc_wcbtc).build_transaction({
             "from": account.address,
             "value": 0, # Value is 0x0 as per user's provided data
@@ -593,22 +566,22 @@ async def swap_usdc_to_wcbtc_interactive(w3, config, private_key):
 
         signed_tx = w3.eth.account.sign_transaction(usdc_wcbtc_tx, private_key=account.key)
         tx_hash = w3.eth.send_raw_transaction(signed_tx.raw_transaction)
-        console.print("[yellow]> Waiting for USDC -> WCBTC transaction confirmation...[/yellow]")
+        console.print(f"[yellow]> Waiting for USDC -> WCBTC transaction confirmation for {account.address}...[/yellow]")
         receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
 
         if receipt["status"] == 1:
-            console.print(f"[green]+ USDC -> WCBTC swap successful! Tx: {config['explorer']}/tx/{tx_hash.hex()}[/green]")
+            console.print(f"[green]+ USDC -> WCBTC swap successful for {account.address}! Tx: {config['explorer']}/tx/{tx_hash.hex()}[/green]")
         else:
-            console.print(f"[red]- USDC -> WCBTC transaction failed! Tx: {config['explorer']}/tx/{tx_hash.hex()}[/red]")
-            console.print(f"[cyan]Transaction receipt: {receipt}[/cyan]")
+            console.print(f"[red]- USDC -> WCBTC transaction failed for {account.address}! Tx: {config['explorer']}/tx/{tx_hash.hex()}[/red]")
+            console.print(f"[cyan]Transaction receipt for {account.address}: {receipt}[/cyan]")
             return
 
         # Display WCBTC received
         wcbtc_balance_after_swap = wcbtc_contract.functions.balanceOf(account.address).call()
-        console.print(f"[green]+ Current WCBTC balance: {wcbtc_balance_after_swap / 10**18:.6f} WCBTC[/green]")
+        console.print(f"[green]+ Current WCBTC balance for {account.address}: {wcbtc_balance_after_swap / 10**18:.6f} WCBTC[/green]")
 
     except Exception as e:
-        console.print(f"[red]- Error during USDC to WCBTC swap: {str(e)}[/red]")
+        console.print(f"[red]- Error during USDC to WCBTC swap for {account.address}: {str(e)}[/red]")
 
 async def wrap_cbtc(w3, config, account, amount_cbtc):
     """
@@ -819,14 +792,36 @@ async def main():
                     for private_key in private_keys:
                         await swap_cbtc_to_nusd(w3, config, private_key)
                         await asyncio.sleep(random.uniform(5, 10))
-                elif option == 4: # Interactive USDC to SUMA Swap
+                elif option == 4: # Interactive USDC to SUMA Swap - Now asks amount once
+                    while True:
+                        try:
+                            usdc_amount_str = console.input("[bold magenta]> Enter the amount of USDC to swap (e.g., 20.5): [/bold magenta]")
+                            usdc_amount_to_swap = float(usdc_amount_str)
+                            if usdc_amount_to_swap <= 0:
+                                console.print("[red]- Amount must be positive. Please enter a valid number.[/red]")
+                                continue
+                            break
+                        except ValueError:
+                            console.print("[red]- Invalid input. Please enter a valid number.[/red]")
+                    console.print(f"[green]+ All accounts will attempt to swap {usdc_amount_to_swap} USDC to SUMA.[/green]")
                     for private_key in private_keys:
-                        await swap_usdc_to_suma_interactive(w3, config, private_key)
-                        await asyncio.sleep(random.uniform(5, 10))
-                elif option == 5: # New option for Interactive USDC to WCBTC Swap
+                        await swap_usdc_to_suma_interactive(w3, config, private_key, usdc_amount_to_swap)
+                        await asyncio.sleep(random.uniform(5, 10)) # Small delay between accounts
+                elif option == 5: # New option for Interactive USDC to WCBTC Swap - Now asks amount once
+                    while True:
+                        try:
+                            usdc_amount_str = console.input("[bold magenta]> Enter the amount of USDC to swap (e.g., 20.0): [/bold magenta]")
+                            usdc_amount_to_swap = float(usdc_amount_str)
+                            if usdc_amount_to_swap <= 0:
+                                console.print("[red]- Amount must be positive. Please enter a valid number.[/red]")
+                                continue
+                            break
+                        except ValueError:
+                            console.print("[red]- Invalid input. Please enter a valid number.[/red]")
+                    console.print(f"[green]+ All accounts will attempt to swap {usdc_amount_to_swap} USDC to WCBTC.[/green]")
                     for private_key in private_keys:
-                        await swap_usdc_to_wcbtc_interactive(w3, config, private_key)
-                        await asyncio.sleep(random.uniform(5, 10))
+                        await swap_usdc_to_wcbtc_interactive(w3, config, private_key, usdc_amount_to_swap)
+                        await asyncio.sleep(random.uniform(5, 10)) # Small delay between accounts
                 elif option == 6: # Add Liquidity - Now with maintenance warning
                     console.print("[bold red]>[IMPORTANT]: This feature is currently under maintenance. Please select another option.[/bold red]")
                     await asyncio.sleep(2) # Give user time to read the message
