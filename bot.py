@@ -21,12 +21,12 @@ CONFIG_FILE = "satsuma_config.json"
 # === Animated Banner ===
 def display_banner():
     banner_text = """
-███████╗ █████╗ ████████╗███████╗██╗   ██║███╗   ███╗ █████╗ 
+███████╗ █████╗ ████████╗███████╗██╗   ██║███╗   ███╗ █████╗
 ██╔════╝██╔══██╗╚══██╔══╝██╔════╝██║   ██║████╗ ████║██╔══██╗
-███████╗███████║   ██║   ███████╗██║   ██║██╔████╔██║███████║
-╚════██║██╔══██║   ██║   ╚════██║██║   ██║██║╚██╔╝██║██╔══██║
-███████║██║  ██║   ██║   ███████║╚██████╔╝██║ ╚═╝ ██║██║  ██║
-╚══════╝╚═╝  ╚═╝   ╚═╝   ╚══════╝ ╚═════╝ ╚═╝     ╚═╝╚═╝  ╚═╝
+███████╗███████║  ██║   ███████╗██║   ██║██╔████╔██║███████║
+╚════██║██╔══██║  ██║   ╚════██║██║   ██║██║╚██╔╝██║██╔══██║
+███████║██║  ██║  ██║   ███████║╚██████╔╝██║ ╚═╝ ██║██║  ██║
+╚══════╝╚═╝  ╚═╝  ╚═╝   ╚══════╝  ╚═════╝ ╚═╝     ╚═╝╚═╝  ╚═╝
     """
     console.print(f"[bold cyan]{banner_text}[/bold cyan]", justify="center")
     console.print(f"[bold green]L E T S - F U C K - T H I S - T E S T N E T [/bold green]", justify="center")
@@ -42,28 +42,26 @@ def display_banner():
 def display_menu():
     table = Table(title="[bold blue]Satsuma & Nectra Bot Menu[/bold blue]", style="green", title_justify="center", show_header=False, expand=True)
     table.add_column(justify="center", style="cyan")
-    
+
     options = [
-        "1. BUY BTC (CRESTAPP)",
-        "2. SELL BTC (CRESTAPP)",
-        "3. Borrow NUSD with cBTC (Nectra)",
-        "4. Deposit NUSD (Nectra)",
-        "5. Swap cBTC (Citrea Native) to NUSD (Satsuma)",
-        "6. Swap USDC to SUMA (Satsuma) - Interactive",
-        "7. Swap USDC to WCBTC (Satsuma) - Interactive",
-        "8. Add Liquidity (WCBTC + USDC) (Satsuma) - Fixed Amounts",
-        "9. Convert SUMA to veSUMA (Satsuma)",
-        "10. Stake veSUMA (Satsuma)",
-        "11. Claim LP Reward (Satsuma)",
-        "12. Run All Features",
-        "13. Exit"
+        "1. Borrow NUSD with cBTC (Nectra)",
+        "2. Deposit NUSD (Nectra)",
+        "3. Swap cBTC (Citrea Native) to NUSD (Satsuma)",
+        "4. Swap USDC to SUMA (Satsuma) - Interactive",
+        "5. Swap USDC to WCBTC (Satsuma) - Interactive",
+        "6. Add Liquidity (WCBTC + USDC) (Satsuma) - Fixed Amounts", # Updated option text
+        "7. Convert SUMA to veSUMA (Satsuma)",
+        "8. Stake veSUMA (Satsuma)",
+        "9. Claim LP Reward (Satsuma)",
+        "10. Run All Features",
+        "11. Exit"
     ]
-    
+
     for opt in options:
         table.add_row(opt)
-    
+
     console.print(table)
-    choice = console.input("[bold magenta]> Select option (1-13): [/bold magenta]")
+    choice = console.input("[bold magenta]> Select option (1-11): [/bold magenta]")
     return choice
 
 # Load or initialize user settings (from previous script, adapted)
@@ -95,7 +93,7 @@ def save_transaction_count(count):
 def load_config():
     display_banner()
     console.print("[yellow]> Loading configuration...[/yellow]", justify="center")
-    
+
     config = {
         "rpc": "https://rpc.testnet.citrea.xyz",
         "chain_id": 5115,
@@ -107,14 +105,11 @@ def load_config():
         "satsuma_lp_reward_contract_address": Web3.to_checksum_address("0x69D57B9D705eaD73a5d2f2476C30c55bD755cc2F"), # New LP Reward Contract (also likely the NonfungiblePositionManager)
         # IMPORTANT: This is the address of the USDC/WCBTC pool. Please verify this address on Satsuma.exchange's liquidity page.
         # It was updated based on the URL you provided: https://www.satsuma.exchange/liquidity/0x9aa034631e14e2c7fc01890f8d7b19ab6aed1666/new-position
-        "satsuma_pool_address": Web3.to_checksum_address("0x9aa034631e14e2c7fc01890f8d7b19ab6aed1666"), 
+        "satsuma_pool_address": Web3.to_checksum_address("0x9aa034631e14e2c7fc01890f8d7b19ab6aed1666"),
 
         # Nectra Contracts
         "nectra_borrow_contract_address": Web3.to_checksum_address("0x6cDC594d5A135d0307aee3449023A42385422355"),
         "nectra_deposit_contract_address": Web3.to_checksum_address("0x2e8ff07d4F29DA47209a58AD66845F7c290E78fD"),
-
-        # Crestapp Contracts
-        "crestapp_contract_address": Web3.to_checksum_address("0xe60D30D6e3f36b95B82eeBaeA32d0dB689Ac7385"), # New Crestapp contract address
 
         # Token Addresses (updated based on user's new data)
         "usdc_address": Web3.to_checksum_address("0x36c16eaC6B0Ba6c50f494914ff015fCa95B7835F"),
@@ -122,7 +117,7 @@ def load_config():
         "nusd_address": Web3.to_checksum_address("0x9B28B690550522608890C3C7e63c0b4A7eBab9AA"),
         "suma_address": Web3.to_checksum_address("0xdE4251dd68e1aD5865b14Dd527E54018767Af58a"), # CORRECTED SUMA ADDRESS
         "vesuma_address": Web3.to_checksum_address("0x97a4f684620D578312Dc9fFBc4b0EbD8E804ab4a"),
-        
+
         # Staking and Voting Contracts (updated based on user's new data)
         "staking_contract_address": Web3.to_checksum_address("0x22625aDDDcD0e6D981312f6c6E2DBb0003863A90"),
         "voting_contract_address": Web3.to_checksum_address("0x1234567890123456789012345678901234567890"), # Placeholder, user didn't provide new voting contract
@@ -164,7 +159,7 @@ def get_private_keys():
     if not private_keys:
         console.print("[red]- No private keys found in .env file (e.g., PRIVATE_KEY_1, PRIVATE_KEY_2, ...)[/red]")
         sys.exit(1)
-        
+
     console.print(f"[green]+ Successfully loaded {len(private_keys)} private key(s)[/green]")
     return private_keys
 
@@ -349,11 +344,11 @@ async def send_custom_transaction(w3, config, account, to_address, data_hex, val
 
         console.print(f"[yellow]> Signing {description} transaction...[/yellow]")
         signed_tx = w3.eth.account.sign_transaction(tx, private_key=account.key)
-        
+
         console.print(f"[yellow]> Sending {description} transaction...[/yellow]")
         tx_hash = w3.eth.send_raw_transaction(signed_tx.raw_transaction)
         console.print(f"[yellow]> Waiting for {description} confirmation... Tx Hash: {tx_hash.hex()}[/yellow]")
-        
+
         receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
 
         if receipt["status"] == 1:
@@ -370,7 +365,7 @@ async def send_custom_transaction(w3, config, account, to_address, data_hex, val
 async def approve_token(w3, config, account, token_address, spender_address, amount):
     try:
         token_contract = w3.eth.contract(address=token_address, abi=ERC20_ABI)
-        
+
         allowance = token_contract.functions.allowance(account.address, spender_address).call()
         # Use 10**6 for USDC and 10**18 for other tokens for correct comparison
         token_decimals = 6 if token_address == config['usdc_address'] else 18
@@ -404,48 +399,10 @@ async def approve_token(w3, config, account, token_address, spender_address, amo
         console.print(f"[red]- Token approval error for {account.address}: {str(e)}[/red]")
         return {"success": False, "error": str(e)}
 
-# === CRESTAPP Functions ===
-async def buy_btc_crestapp(w3, config, private_key):
-    account = w3.eth.account.from_key(private_key)
-    console.print(f"\n[blue]=== Buying BTC on CRESTAPP for: {account.address} ===[/blue]")
-    console.print("[yellow]WARNING: This transaction uses hardcoded gas parameters and data. Transaction might fail if network conditions change.[/yellow]")
-
-    # Transaction details from user's provided data for BUY 10$ BTC
-    to_address = config["crestapp_contract_address"]
-    data_hex = "0x0d71be6400000000000000000000000007f8ec2b79b7a1998fd0b21a4668b0cf1ca72c02000000000000000000000000b1a7559274bc1e92c355c7244255dc291afedb000000000000000000000000009fee47bf6a2bf54a9ce38caff94bb50adca4710e000000000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0000000000000000000000000000000000000000000000008ac7230489e8000000000000000000000000000000000000000000000000000000004b7f459014000000000000000000000000000000000000000000000000000000000068797eed463e82a6ffc74926c6868be5f7e0d46e40b5e7fdf90f914044b1478c0530a4080000000000000000000000000000000000000000000000000000000000000120000000000000000000000000000000000000000000000000000000000000004152db9f643f891f1be72e43bebb3170451fac0a6811c6c56611b44660a643e2811dd7813f0078c7b0cafc90ea2d042a40da1ce0ab9d2c9388aca61da2b4f45a731c00000000000000000000000000000000000000000000000000000000000000"
-    value_wei = 0x0 # For BUY, value is 0 as per provided data
-    gas_limit = 0x4d681 # from user's data
-    gas_price_wei = 0xb71b78 # from user's data
-
-    await send_custom_transaction(w3, config, account, to_address, data_hex, value_wei, gas_limit, gas_price_wei, "Buy BTC (CRESTAPP)")
-
-async def sell_btc_crestapp(w3, config, private_key):
-    account = w3.eth.account.from_key(private_key)
-    console.print(f"\n[blue]=== Selling BTC on CRESTAPP for: {account.address} ===[/blue]")
-    console.print("[yellow]WARNING: This transaction uses hardcoded gas parameters and data. Transaction might fail if network conditions change.[/yellow]")
-
-    # Transaction details from user's provided data for SELL 10$ BTC
-    to_address = config["crestapp_contract_address"]
-    data_hex = "0x0d71be6400000000000000000000000007f8ec2b79b7a1998fd0b21a4668b0cf1ca72c02000000000000000000000000b1a7559274bc1e92c355c7244255dc291afedb00000000000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0000000000000000000000009fee47bf6a2bf54a9ce38caff94bb50adca4710e00000000000000000000000000000000000000000000000000004b7a9d784c000000000000000000000000000000000000000000000000008ac7230489e800000000000000000000000000000000000000000000000000000000000068797f28f03be985515bbc16c3dc468ac8877a0d34acc3f816875900121b78aed4041c5b0000000000000000000000000000000000000000000000000000000000000120000000000000000000000000000000000000000000000000000000000000004173dd5332081ded1d6d12d38f1b45035f9be6c417a2152a38d7e09afb4816038a4c30179b0f2ec8599b7f3e42ed2babe18d7dbe440bfe95807a4f7db7676919501c00000000000000000000000000000000000000000000000000000000000000"
-    value_wei = 0x4b7a9d784c00 # This value is present in the provided transaction data for SELL.
-    gas_limit = 0x37b9e # from user's data
-    gas_price_wei = 0xb71b78 # from user's data
-
-    # NOTE: Selling BTC might imply that the contract needs to transfer cBTC *from* the user.
-    # If the provided data is a direct call to the Crestapp contract that also takes 'value',
-    # then approval for cBTC might not be needed if it's handled like a native token.
-    # However, if it interacts with a WCBTC token contract that then sells, an approval would be needed.
-    # For now, following the provided raw transaction data directly.
-
-    await send_custom_transaction(w3, config, account, to_address, data_hex, value_wei, gas_limit, gas_price_wei, "Sell BTC (CRESTAPP)")
-
-
 # === Nectra Functions ===
 async def borrow_nusd_with_cbtc(w3, config, private_key):
     account = w3.eth.account.from_key(private_key)
     console.print(f"\n[blue]=== Borrowing NUSD with cBTC for: {account.address} ===[/blue]")
-    console.print("[yellow]WARNING: This transaction uses hardcoded gas parameters and data. Transaction might fail if network conditions change.[/yellow]")
-
 
     # Transaction details from user's provided data
     to_address = config["nectra_borrow_contract_address"]
@@ -459,8 +416,6 @@ async def borrow_nusd_with_cbtc(w3, config, private_key):
 async def deposit_nusd(w3, config, private_key):
     account = w3.eth.account.from_key(private_key)
     console.print(f"\n[blue]=== Depositing NUSD for: {account.address} ===[/blue]")
-    console.print("[yellow]WARNING: This transaction uses hardcoded gas parameters and data. Transaction might fail if network conditions change.[/yellow]")
-
 
     # Transaction details from user's provided data
     to_address = config["nectra_deposit_contract_address"]
@@ -482,8 +437,6 @@ async def deposit_nusd(w3, config, private_key):
 async def swap_cbtc_to_nusd(w3, config, private_key):
     account = w3.eth.account.from_key(private_key)
     console.print(f"\n[blue]=== Swapping cBTC (Citrea Native) to NUSD for: {account.address} ===[/blue]")
-    console.print("[yellow]WARNING: This transaction uses hardcoded gas parameters and data. Transaction might fail if network conditions change.[/yellow]")
-
 
     # Transaction details from user's provided data
     to_address = config["satsuma_swap_router_address"]
@@ -664,10 +617,8 @@ async def wrap_cbtc(w3, config, account, amount_cbtc):
     """
     try:
         amount_wei = w3.to_wei(amount_cbtc, 'ether') # cBTC has 18 decimals like ETH
-        
-        console.print(f"\n[blue]=== Wrapping {amount_cbtc} cBTC to WCBTC for: {account.address} ===[/blue]")
-        console.print("[yellow]WARNING: This transaction uses hardcoded gas parameters and data. Transaction might fail if network conditions change.[/yellow]")
 
+        console.print(f"\n[blue]=== Wrapping {amount_cbtc} cBTC to WCBTC for: {account.address} ===[/blue]")
 
         to_address = config["wcbtc_address"] # WCBTC contract address
         data_hex = "0xd0e30db0" # Function selector for deposit() on WETH-like contracts
@@ -686,8 +637,6 @@ async def add_lp_satsuma(w3, config, private_key):
         account = w3.eth.account.from_key(private_key)
         console.print(f"\n[blue]=== Adding Liquidity (WCBTC + USDC) for: {account.address} ===[/blue]")
         console.print("[yellow]Note: This function uses fixed amounts (5 USDC and ~0.000064 WCBTC) from provided transaction data.[/yellow]")
-        console.print("[yellow]WARNING: This transaction uses hardcoded gas parameters and data. Transaction might fail if network conditions change.[/yellow]")
-
 
         usdc_contract = w3.eth.contract(address=config["usdc_address"], abi=ERC20_ABI)
         wcbtc_contract = w3.eth.contract(address=config["wcbtc_address"], abi=ERC20_ABI)
@@ -713,7 +662,7 @@ async def add_lp_satsuma(w3, config, private_key):
         if usdc_balance < usdc_amount_to_add_wei:
             console.print(f"[red]- Insufficient USDC balance. Needed: {usdc_amount_to_add} USDC, Have: {usdc_balance / 10**6:.6f} USDC[/red]")
             return
-        
+
         if wcbtc_balance < wcbtc_amount_to_add_wei:
             missing_wcbtc = (wcbtc_amount_to_add_wei - wcbtc_balance) / 10**18
             console.print(f"[yellow]- Insufficient WCBTC balance. Missing: {missing_wcbtc:.10f} WCBTC[/yellow]")
@@ -741,21 +690,21 @@ async def add_lp_satsuma(w3, config, private_key):
         console.print("[yellow]> Approving USDC and WCBTC for LP manager...[/yellow]")
         usdc_approval = await approve_token(w3, config, account, config["usdc_address"], config["satsuma_lp_reward_contract_address"], usdc_amount_to_add_wei)
         wcbtc_approval = await approve_token(w3, config, account, config["wcbtc_address"], config["satsuma_lp_reward_contract_address"], wcbtc_amount_to_add_wei)
-        
+
         if not usdc_approval["success"] or not wcbtc_approval["success"]:
             console.print("[red]- Token approval failed. Aborting liquidity add.[/red]")
             return
-            
+
         # Use the exact raw data for the multicall transaction
         to_address = config["satsuma_lp_reward_contract_address"] # This is the NonfungiblePositionManager
         # Data from your successful transaction: 0xac9650d8...
-        data_hex = "0xac9650d80000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000164fe3f3be700000000000000000000000036c16eac6b0ba6c50f494914ff015fca95b7835f0000000000000000000000008d0c9d1c17ae5e40fff9be350f57840e9e66cd930000000000000000000000000000000000000000000000000000000000000000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff2764c00000000000000000000000000000000000000000000000000000000000d89b400000000000000000000000000000000000000000000000000000000004c4b4000000000000000000000000000000000000000000000000000003a1e1f69cc72000000000000000000000000000000000000000000000000000039f8e17b7e3c00000000000000000000000007f8ec2b79b7a1998fd0b21a4668b0cf1ca72c02000000000000000000000000000000000000000000000000000001981a600ca200000000000000000000000000000000000000000000000000000000"
+        data_hex = "0xac9650d80000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000164fe3f3be700000000000000000000000036c16eac6b0ba6c50f494914ff015fca95b7835f0000000000000000000000008d0c9d1c17ae5e40fff9be350f57840e9e66cd930000000000000000000000000000000000000000000000000000000000000000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff2764c00000000000000000000000000000000000000000000000000000000000d89b400000000000000000000000000000000000000000000000000000000004c4b4000000000000000000000000000000000000000000000000000003a1e1f69cc7200000000000000000000000000000000000000000000000000000000004c1a9b000000000000000000000000000000000000000000000000000039f8e17b7e3c00000000000000000000000007f8ec2b79b7a1998fd0b21a4668b0cf1ca72c02000000000000000000000000000000000000000000000000000001981a600ca200000000000000000000000000000000000000000000000000000000"
         value_wei = 0x0 # Value is 0 for multicall
         gas_limit = 0x90543 # Gas limit from your successful transaction
         gas_price_wei = 0xb71b78 # Gas price from your successful transaction
 
         await send_custom_transaction(w3, config, account, to_address, data_hex, value_wei, gas_limit, gas_price_wei, "Add Liquidity (Fixed Amounts)")
-                
+
     except Exception as e: # Outer exception handler for add_lp_satsuma
         console.print(f"[red]- Error adding liquidity: {str(e)}[/red]")
 
@@ -763,8 +712,6 @@ async def add_lp_satsuma(w3, config, private_key):
 async def convert_suma_to_vesuma(w3, config, private_key):
     account = w3.eth.account.from_key(private_key)
     console.print(f"\n[blue]=== Converting SUMA to veSUMA for: {account.address} ===[/blue]")
-    console.print("[yellow]WARNING: This transaction uses hardcoded gas parameters and data. Transaction might fail if network conditions change.[/yellow]")
-
 
     # Transaction details from user's provided data
     to_address = config["vesuma_address"]
@@ -785,8 +732,6 @@ async def convert_suma_to_vesuma(w3, config, private_key):
 async def stake_vesuma(w3, config, private_key):
     account = w3.eth.account.from_key(private_key)
     console.print(f"\n[blue]=== Staking veSUMA for: {account.address} ===[/blue]")
-    console.print("[yellow]WARNING: This transaction uses hardcoded gas parameters and data. Transaction might fail if network conditions change.[/yellow]")
-
 
     # Transaction details from user's provided data
     to_address = config["staking_contract_address"]
@@ -807,8 +752,6 @@ async def stake_vesuma(w3, config, private_key):
 async def claim_lp_reward(w3, config, private_key):
     account = w3.eth.account.from_key(private_key)
     console.print(f"\n[blue]=== Claiming LP Reward for: {account.address} ===[/blue]")
-    console.print("[yellow]WARNING: This transaction uses hardcoded gas parameters and data. Transaction might fail if network conditions change.[/yellow]")
-
 
     # Transaction details from user's provided data
     to_address = config["satsuma_lp_reward_contract_address"]
@@ -825,12 +768,6 @@ async def run_all_features(w3, config, private_keys):
         account = w3.eth.account.from_key(private_key)
         console.print(f"\n[bold cyan]--- Processing all features for Account {i+1}: {account.address} ---[/bold cyan]")
 
-        # Crestapp Actions
-        await buy_btc_crestapp(w3, config, private_key)
-        await asyncio.sleep(random.uniform(10, 20)) # Delay between actions
-        await sell_btc_crestapp(w3, config, private_key)
-        await asyncio.sleep(random.uniform(10, 20))
-
         # Nectra Actions
         await borrow_nusd_with_cbtc(w3, config, private_key)
         await asyncio.sleep(random.uniform(10, 20)) # Delay between actions
@@ -838,12 +775,8 @@ async def run_all_features(w3, config, private_keys):
         await asyncio.sleep(random.uniform(10, 20))
 
         # Satsuma Actions
-        # Interactive swaps and LP add are not included in run_all_features as they require user input
+        # Interactive swaps and LP add are not included in run_all_features
         await swap_cbtc_to_nusd(w3, config, private_key)
-        await asyncio.sleep(random.uniform(10, 20))
-        # Note: add_lp_satsuma is included here as it uses fixed amounts, but it also has a wrap_cbtc sub-prompt
-        # which might be disruptive in an automated run. Consider pre-wrapping if this becomes an issue.
-        await add_lp_satsuma(w3, config, private_key) 
         await asyncio.sleep(random.uniform(10, 20))
         await convert_suma_to_vesuma(w3, config, private_key)
         await asyncio.sleep(random.uniform(10, 20))
@@ -871,57 +804,49 @@ async def main():
             choice = display_menu()
             try:
                 option = int(choice)
-                if option == 13: # Updated exit option
+                if option == 11: # Updated exit option
                     console.print("[yellow]> Exiting Satsuma & Nectra Bot...[/yellow]")
                     sys.exit(0)
-                elif option == 1: # BUY BTC (CRESTAPP)
-                    for private_key in private_keys:
-                        await buy_btc_crestapp(w3, config, private_key)
-                        await asyncio.sleep(random.uniform(5, 10)) # Small delay between accounts
-                elif option == 2: # SELL BTC (CRESTAPP)
-                    for private_key in private_keys:
-                        await sell_btc_crestapp(w3, config, private_key)
-                        await asyncio.sleep(random.uniform(5, 10)) # Small delay between accounts
-                elif option == 3:
+                elif option == 1:
                     for private_key in private_keys:
                         await borrow_nusd_with_cbtc(w3, config, private_key)
                         await asyncio.sleep(random.uniform(5, 10)) # Small delay between accounts
-                elif option == 4:
+                elif option == 2:
                     for private_key in private_keys:
                         await deposit_nusd(w3, config, private_key)
                         await asyncio.sleep(random.uniform(5, 10))
-                elif option == 5:
+                elif option == 3:
                     for private_key in private_keys:
                         await swap_cbtc_to_nusd(w3, config, private_key)
                         await asyncio.sleep(random.uniform(5, 10))
-                elif option == 6: # Interactive USDC to SUMA Swap
+                elif option == 4: # Interactive USDC to SUMA Swap
                     for private_key in private_keys:
                         await swap_usdc_to_suma_interactive(w3, config, private_key)
                         await asyncio.sleep(random.uniform(5, 10))
-                elif option == 7: # New option for Interactive USDC to WCBTC Swap
+                elif option == 5: # New option for Interactive USDC to WCBTC Swap
                     for private_key in private_keys:
                         await swap_usdc_to_wcbtc_interactive(w3, config, private_key)
                         await asyncio.sleep(random.uniform(5, 10))
-                elif option == 8: # Add Liquidity
-                    for private_key in private_keys:
-                        await add_lp_satsuma(w3, config, private_key)
-                        await asyncio.sleep(random.uniform(5, 10))
-                elif option == 9:
+                elif option == 6: # Add Liquidity - Now with maintenance warning
+                    console.print("[bold red]>[IMPORTANT]: This feature is currently under maintenance. Please select another option.[/bold red]")
+                    await asyncio.sleep(2) # Give user time to read the message
+                    # The loop will automatically go back to display_menu()
+                elif option == 7:
                     for private_key in private_keys:
                         await convert_suma_to_vesuma(w3, config, private_key)
                         await asyncio.sleep(random.uniform(5, 10))
-                elif option == 10:
+                elif option == 8:
                     for private_key in private_keys:
                         await stake_vesuma(w3, config, private_key)
                         await asyncio.sleep(random.uniform(5, 10))
-                elif option == 11: # Option for Claim LP Reward
+                elif option == 9: # Option for Claim LP Reward
                     for private_key in private_keys:
                         await claim_lp_reward(w3, config, private_key)
                         await asyncio.sleep(random.uniform(5, 10))
-                elif option == 12: # Option for Run All Features
+                elif option == 10: # Option for Run All Features
                     await run_all_features(w3, config, private_keys)
                 else:
-                    console.print("[red]- Invalid option. Please select 1-13.[/red]")
+                    console.print("[red]- Invalid option. Please select 1-11.[/red]")
             except ValueError:
                 console.print("[red]- Invalid input. Please enter a number.[/red]")
             except Exception as e:
