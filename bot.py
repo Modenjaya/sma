@@ -840,6 +840,11 @@ async def add_lp_satsuma(w3, config, private_key):
         # The 'multicall' function takes an array of bytes (each byte string is an encoded function call)
         multicall_data_hex = nfpm_contract.functions.multicall([mint_call_data])._encode_transaction_data()
         
+        # --- DEBUG PRINT: Check the generated data ---
+        console.print(f"[cyan]DEBUG: Generated mint_call_data: {mint_call_data.hex()}[/cyan]")
+        console.print(f"[cyan]DEBUG: Generated multicall_data_hex: {multicall_data_hex.hex()}[/cyan]")
+        # --- END DEBUG PRINT ---
+
         to_address_final = config["satsuma_lp_reward_contract_address"] # NonfungiblePositionManager
         value_wei_final = 0 # multicall itself doesn't typically send value unless it's for a native token deposit within.
 
