@@ -296,6 +296,7 @@ VESUMA_ABI = [
         "type": "function"
     },
     {
+
         "name": "increase_unlock_time",
         "inputs": [
             {"name": "_unlock_time", "type": "uint256"}
@@ -739,8 +740,7 @@ async def add_lp_satsuma(w3, config, private_key):
                 console.print(f"[red]- One or both pool reserves are zero (USDC: {reserve_usdc}, WCBTC: {reserve_wcbtc}). Cannot calculate ratio. Aborting LP add.[/red]")
                 return
 
-            # Correct formula: amount_wcbtc_wei = (amount_usdc_wei * reserve_wcbtc) / reserve_usdc
-            wcbtc_amount_to_add_float = (usdc_amount_to_add_wei * reserve_wcbtc) / reserve_usdc
+            wcbtc_amount_to_add_float = (usdc_amount_to_add_wei * reserve_wcbtc) / reserve_usdc 
             wcbtc_amount_to_add_wei = int(wcbtc_amount_to_add_float)
 
             wcbtc_amount_to_add = wcbtc_amount_to_add_wei / (10**18)
@@ -802,11 +802,11 @@ async def add_lp_satsuma(w3, config, private_key):
         console.print(f"[green]+ Minimum amounts (with {slippage_tolerance*100}% slippage): USDC={amount_usdc_min / 10**6:.6f}, WCBTC={amount_wcbtc_min / 10**18:.10f}[/green]")
 
         # --- Dynamically build the 'mint' call for the NonfungiblePositionManager ---
-        # Assuming a common fee tier (e.g., 10000 for 1%) and full range ticks
-        # You might need to verify these values for Satsuma's specific pool
-        fee_tier = 10000 # Example: 1% fee tier (common in Uniswap V3)
-        tick_lower = -887272 # Uniswap V3 MIN_TICK
-        tick_upper = 887272 # Uniswap V3 MAX_TICK
+        # Using fee_tier 3000 (0.3%) from your successful transaction analysis
+        # Using full range ticks for general dynamic add.
+        fee_tier = 3000 # Correct fee tier from your analysis (0.3%)
+        tick_lower = 0 # From your successful transaction's decoded data
+        tick_upper = 370720 # From your successful transaction's decoded data
 
         mint_params = (
             config["usdc_address"],
@@ -829,10 +829,6 @@ async def add_lp_satsuma(w3, config, private_key):
         # The 'multicall' function takes an array of bytes (each byte string is an encoded function call)
         multicall_data_hex = nfpm_contract.functions.multicall([mint_call_data])._encode_transaction_data()
         
-        # Extract only the data part (remove method ID from _encode_transaction_data() if it's already included by send_custom_transaction)
-        # web3.py's _encode_transaction_data already includes the method ID.
-        # So, we pass multicall_data_hex directly.
-
         to_address_final = config["satsuma_lp_reward_contract_address"] # NonfungiblePositionManager
         value_wei_final = 0 # multicall itself doesn't typically send value unless it's for a native token deposit within.
 
