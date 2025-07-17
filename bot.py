@@ -48,13 +48,13 @@ def display_menu():
         "2. Deposit NUSD (Nectra)",
         "3. Swap cBTC (Citrea Native) to NUSD (Satsuma)",
         "4. Swap USDC to SUMA (Satsuma) - Interactive",
-        "5. Swap USDC to WCBTC (Satsuma) - Interactive", # New option
-        "6. Add Liquidity (WCBTC + USDC) (Satsuma)", # Updated option text
+        "5. Swap USDC to WCBTC (Satsuma) - Interactive",
+        "6. Add Liquidity (WCBTC + USDC) (Satsuma)",
         "7. Convert SUMA to veSUMA (Satsuma)",
         "8. Stake veSUMA (Satsuma)",
         "9. Claim LP Reward (Satsuma)",
         "10. Run All Features",
-        "11. Exit" # Updated exit option
+        "11. Exit"
     ]
     
     for opt in options:
@@ -103,7 +103,9 @@ def load_config():
         "satsuma_swap_router_address": Web3.to_checksum_address("0x3012e9049d05b4b5369d690114d5a5861ebb85cb"), # Contract for swaps
         "satsuma_lp_manager_address": Web3.to_checksum_address("0xcA3534C15Cc22535BF880Ba204c69340f813730b"), # Contract for adding LP
         "satsuma_lp_reward_contract_address": Web3.to_checksum_address("0x69D57B9D705eaD73a5d2f2476C30c55bD755cc2F"), # New LP Reward Contract
-        "satsuma_pool_address": Web3.to_checksum_address("0x080c376e6aB309fF1a861e1c3F91F27b8D4f1443"), # Example pool address (from previous script)
+        # IMPORTANT: This is the address of the USDC/WCBTC pool. Please verify this address on Satsuma.exchange's liquidity page.
+        # It was updated based on the URL you provided: https://www.satsuma.exchange/liquidity/0x9aa034631e14e2c7fc01890f8d7b19ab6aed1666/new-position
+        "satsuma_pool_address": Web3.to_checksum_address("0x9aa034631e14e2c7fc01890f8d7b19ab6aed1666"), 
 
         # Nectra Contracts
         "nectra_borrow_contract_address": Web3.to_checksum_address("0x6cDC594d5A135d0307aee3449023A42385422355"),
@@ -559,7 +561,6 @@ async def swap_usdc_to_wcbtc_interactive(w3, config, private_key):
             return
 
         # Approve USDC for the swap router
-        # FIX: Corrected the arguments for approve_token
         approval_result = await approve_token(w3, config, account, config["usdc_address"], config["satsuma_swap_router_address"], amount_in_usdc_wei)
         if not approval_result["success"]:
             console.print("[red]- Skipping swap due to USDC approval failure[/red]")
@@ -668,10 +669,13 @@ async def add_lp_satsuma(w3, config, private_key):
         # Fetch pool reserves to determine WCBTC amount
         try:
             pool_contract = w3.eth.contract(address=config["satsuma_pool_address"], abi=ALGEBRA_POOL_ABI)
-            reserves = pool_contract.functions.getReserves().call()
             
+            # Attempt to get token addresses from the pool contract
             token0_address = pool_contract.functions.token0().call()
             token1_address = pool_contract.functions.token1().call()
+            
+            # Attempt to get reserves from the pool contract
+            reserves = pool_contract.functions.getReserves().call()
 
             # Determine which reserve corresponds to USDC and WCBTC
             if token0_address == config["usdc_address"] and token1_address == config["wcbtc_address"]:
@@ -681,7 +685,7 @@ async def add_lp_satsuma(w3, config, private_key):
                 reserve_usdc = reserves[1]
                 reserve_wcbtc = reserves[0]
             else:
-                console.print("[red]- Could not determine USDC/WCBTC reserves from the pool. Aborting LP add.[/red]")
+                console.print(f"[red]- Pool tokens mismatch. Expected USDC ({config['usdc_address']}) and WCBTC ({config['wcbtc_address']}), but found Token0: {token0_address}, Token1: {token1_address}. Aborting LP add.[/red]")
                 return
 
             # Calculate required WCBTC based on 50:50 ratio of current pool
@@ -701,7 +705,7 @@ async def add_lp_satsuma(w3, config, private_key):
             console.print(f"[green]+ Calculated WCBTC needed for {usdc_amount_to_add} USDC: {wcbtc_amount_to_add:.10f} WCBTC[/green]")
 
         except Exception as e:
-            console.print(f"[red]- Failed to fetch pool reserves or calculate ratio: {str(e)}. Aborting LP add.[/red]")
+            console.print(f"[red]- Failed to fetch pool reserves or calculate ratio: {str(e)}. Please ensure 'satsuma_pool_address' is correct and the pool has liquidity. Aborting LP add.[/red]")
             return
 
         # Check WCBTC balance and offer to wrap cBTC
