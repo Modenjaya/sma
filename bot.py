@@ -113,7 +113,7 @@ def load_config():
         "usdc_address": Web3.to_checksum_address("0x36c16eaC6B0Ba6c50f494914ff015fCa95B7835F"),
         "wcbtc_address": Web3.to_checksum_address("0x8d0c9d1c17ae5e40fff9be350f57840e9e66cd93"),
         "nusd_address": Web3.to_checksum_address("0x9B28B690550522608890C3C7e63c0b4A7eBab9AA"),
-        "suma_address": Web3.to_checksum_address("0xdE4251dd68e1aD5865b14Dd527E54018767Af58a"), # Using address from previous script because user's provided SUMA address was same as USDC.
+        "suma_address": Web3.to_checksum_address("0xdE4251dd68e1aD58656b14Dd527E54018767Af58a"), # Corrected from previous script to avoid conflict with USDC if it was intended.
         "vesuma_address": Web3.to_checksum_address("0x97a4f684620D578312Dc9fFBc4b0EbD8E804ab4a"),
         
         # Staking and Voting Contracts (updated based on user's new data)
@@ -559,7 +559,8 @@ async def swap_usdc_to_wcbtc_interactive(w3, config, private_key):
             return
 
         # Approve USDC for the swap router
-        approval_result = await approve_token(w3, config, account, config["satsuma_swap_router_address"], amount_in_usdc_wei)
+        # FIX: Corrected the arguments for approve_token
+        approval_result = await approve_token(w3, config, account, config["usdc_address"], config["satsuma_swap_router_address"], amount_in_usdc_wei)
         if not approval_result["success"]:
             console.print("[red]- Skipping swap due to USDC approval failure[/red]")
             return
