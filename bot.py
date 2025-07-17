@@ -49,7 +49,7 @@ def display_menu():
         "3. Swap cBTC (Citrea Native) to NUSD (Satsuma)",
         "4. Swap USDC to SUMA (Satsuma) - Interactive",
         "5. Swap USDC to WCBTC (Satsuma) - Interactive",
-        "6. Add Liquidity (WCBTC + USDC) (Satsuma)",
+        "6. Add Liquidity (WCBTC + USDC) (Satsuma) - Fixed Amounts", # Updated option text
         "7. Convert SUMA to veSUMA (Satsuma)",
         "8. Stake veSUMA (Satsuma)",
         "9. Claim LP Reward (Satsuma)",
@@ -636,6 +636,7 @@ async def add_lp_satsuma(w3, config, private_key):
     try: # Outer try block for the entire function
         account = w3.eth.account.from_key(private_key)
         console.print(f"\n[blue]=== Adding Liquidity (WCBTC + USDC) for: {account.address} ===[/blue]")
+        console.print("[yellow]Note: This function uses fixed amounts (5 USDC and ~0.000064 WCBTC) from provided transaction data.[/yellow]")
 
         usdc_contract = w3.eth.contract(address=config["usdc_address"], abi=ERC20_ABI)
         wcbtc_contract = w3.eth.contract(address=config["wcbtc_address"], abi=ERC20_ABI)
@@ -649,72 +650,19 @@ async def add_lp_satsuma(w3, config, private_key):
         console.print(f"[green]+ Current WCBTC Balance: {wcbtc_balance / 10**18:.6f} WCBTC[/green]")
         console.print(f"[green]+ Current Native cBTC Balance: {cbtc_native_balance / 10**18:.6f} cBTC[/green]")
 
-        while True:
-            try:
-                usdc_amount_to_add_str = console.input("[bold magenta]> Enter the amount of USDC to add to LP (e.g., 5.0): [/bold magenta]")
-                usdc_amount_to_add = float(usdc_amount_to_add_str)
-                if usdc_amount_to_add <= 0:
-                    console.print("[red]- Amount must be positive. Please enter a valid number.[/red]")
-                    continue
-                break
-            except ValueError:
-                console.print("[red]- Invalid input. Please enter a valid number.[/red]")
+        # Fixed amounts from the provided successful transaction data
+        usdc_amount_to_add_wei = 5 * (10**6) # 5 USDC
+        wcbtc_amount_to_add_wei = 64203400000000 # 0.0000642034 WCBTC (from your provided data: 0x3a3529440000 is 0.0000642034 in wei)
 
-        usdc_amount_to_add_wei = int(usdc_amount_to_add * 10**6) # USDC has 6 decimals
+        usdc_amount_to_add = usdc_amount_to_add_wei / 10**6
+        wcbtc_amount_to_add = wcbtc_amount_to_add_wei / 10**18
+
+        console.print(f"[green]+ Fixed amounts for LP: {usdc_amount_to_add} USDC and {wcbtc_amount_to_add:.10f} WCBTC[/green]")
 
         if usdc_balance < usdc_amount_to_add_wei:
             console.print(f"[red]- Insufficient USDC balance. Needed: {usdc_amount_to_add} USDC, Have: {usdc_balance / 10**6:.6f} USDC[/red]")
             return
-
-        # Fetch pool reserves to determine WCBTC amount
-        try:
-            pool_contract = w3.eth.contract(address=config["satsuma_pool_address"], abi=ALGEBRA_POOL_ABI)
-            
-            # Attempt to get token addresses from the pool contract
-            token0_address = pool_contract.functions.token0().call()
-            token1_address = pool_contract.functions.token1().call()
-            
-            # Attempt to get reserves from the pool contract
-            reserves = pool_contract.functions.getReserves().call()
-
-            # Determine which reserve corresponds to USDC and WCBTC
-            if token0_address == config["usdc_address"] and token1_address == config["wcbtc_address"]:
-                reserve_usdc = reserves[0]
-                reserve_wcbtc = reserves[1]
-            elif token0_address == config["wcbtc_address"] and token1_address == config["usdc_address"]:
-                reserve_usdc = reserves[1]
-                reserve_wcbtc = reserves[0]
-            else:
-                console.print(f"[red]- Pool tokens mismatch. Expected USDC ({config['usdc_address']}) and WCBTC ({config['wcbtc_address']}), but found Token0: {token0_address}, Token1: {token1_address}. Aborting LP add.[/red]")
-                return
-
-            # Calculate required WCBTC based on 50:50 ratio of current pool
-            # Correct formula: Amount_WCBTC_wei = (Amount_USDC_wei * Reserve_WCBTC_wei) / Reserve_USDC_wei
-            # This correctly handles the decimal differences because all values are in their respective wei units.
-            
-            # Use floating point for intermediate calculation to maintain precision
-            # Ensure reserves are not zero to avoid division by zero
-            if reserve_usdc == 0 or reserve_wcbtc == 0:
-                console.print(f"[red]- One or both pool reserves are zero (USDC: {reserve_usdc}, WCBTC: {reserve_wcbtc}). Cannot calculate ratio. Aborting LP add.[/red]")
-                return
-
-            wcbtc_amount_to_add_float = (usdc_amount_to_add_wei * reserve_wcbtc) / reserve_usdc 
-            wcbtc_amount_to_add_wei = int(wcbtc_amount_to_add_float)
-
-            wcbtc_amount_to_add = wcbtc_amount_to_add_wei / 10**18
-
-            console.print(f"[green]+ Raw Reserves: USDC={reserve_usdc}, WCBTC={reserve_wcbtc}[/green]")
-            console.print(f"[green]+ Calculated WCBTC needed for {usdc_amount_to_add} USDC: {wcbtc_amount_to_add:.18f} WCBTC (raw wei: {wcbtc_amount_to_add_wei})[/green]")
-
-            if wcbtc_amount_to_add_wei == 0:
-                console.print("[red]- Calculated WCBTC amount is zero. This might happen if the pool ratio is extremely skewed or the USDC amount is too small. Aborting LP add.[/red]")
-                return
-
-        except Exception as e:
-            console.print(f"[red]- Failed to fetch pool reserves or calculate ratio: {str(e)}. Please ensure 'satsuma_pool_address' is correct and the pool has liquidity. Aborting LP add.[/red]")
-            return
-
-        # Check WCBTC balance and offer to wrap cBTC
+        
         if wcbtc_balance < wcbtc_amount_to_add_wei:
             missing_wcbtc = (wcbtc_amount_to_add_wei - wcbtc_balance) / 10**18
             console.print(f"[yellow]- Insufficient WCBTC balance. Missing: {missing_wcbtc:.10f} WCBTC[/yellow]")
@@ -738,9 +686,8 @@ async def add_lp_satsuma(w3, config, private_key):
                 console.print(f"[red]- Insufficient cBTC native balance to wrap. Have: {cbtc_native_balance / 10**18:.6f} cBTC. Aborting LP add.[/red]")
                 return
 
-        # Approve tokens to the LP manager contract
+        # Approve tokens to the LP manager contract (NonfungiblePositionManager)
         console.print("[yellow]> Approving USDC and WCBTC for LP manager...[/yellow]")
-        # Changed target of approval to satsuma_lp_reward_contract_address (NonfungiblePositionManager)
         usdc_approval = await approve_token(w3, config, account, config["usdc_address"], config["satsuma_lp_reward_contract_address"], usdc_amount_to_add_wei)
         wcbtc_approval = await approve_token(w3, config, account, config["wcbtc_address"], config["satsuma_lp_reward_contract_address"], wcbtc_amount_to_add_wei)
         
@@ -748,52 +695,15 @@ async def add_lp_satsuma(w3, config, private_key):
             console.print("[red]- Token approval failed. Aborting liquidity add.[/red]")
             return
             
-        # Get router contract (now targeting the NonfungiblePositionManager)
-        router_contract = w3.eth.contract(address=config["satsuma_lp_reward_contract_address"], abi=SWAP_ROUTER_ABI) # Using SWAP_ROUTER_ABI for now, assuming it has addLiquidity
-        deadline = int(time.time()) + 20 * 60 # 20 minutes
+        # Use the exact raw data for the multicall transaction
+        to_address = config["satsuma_lp_reward_contract_address"] # This is the NonfungiblePositionManager
+        # Data from your successful transaction: 0xac9650d8...
+        data_hex = "0xac9650d80000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000164fe3f3be700000000000000000000000036c16eac6b0ba6c50f494914ff015fca95b7835f0000000000000000000000008d0c9d1c17ae5e40fff9be350f57840e9e66cd930000000000000000000000000000000000000000000000000000000000000000fffffffffffffffffffffffffffffffffffffffffffffffffffffffffff2764c00000000000000000000000000000000000000000000000000000000000d89b400000000000000000000000000000000000000000000000000000000004c4b4000000000000000000000000000000000000000000000000000003a1e1f69cc7200000000000000000000000000000000000000000000000000000000004c1a9b000000000000000000000000000000000000000000000000000039f8e17b7e3c00000000000000000000000007f8ec2b79b7a1998fd0b21a4668b0cf1ca72c02000000000000000000000000000000000000000000000000000001981a600ca200000000000000000000000000000000000000000000000000000000"
+        value_wei = 0x0 # Value is 0 for multicall
+        gas_limit = 0x90543 # Gas limit from your successful transaction
+        gas_price_wei = 0xb71b78 # Gas price from your successful transaction
 
-        # Define slippage tolerance (e.g., 0.5%)
-        slippage_tolerance = 0.005
-        amount_usdc_min = int(usdc_amount_to_add_wei * (1 - slippage_tolerance))
-        amount_wcbtc_min = int(wcbtc_amount_to_add_wei * (1 - slippage_tolerance))
-
-        console.print(f"[green]+ Adding {usdc_amount_to_add:.6f} USDC and {wcbtc_amount_to_add:.10f} WCBTC to LP.[/green]")
-        console.print(f"[green]+ Minimum amounts (with {slippage_tolerance*100}% slippage): USDC={amount_usdc_min / 10**6:.6f}, WCBTC={amount_wcbtc_min / 10**18:.10f}[/green]")
-
-        # Build add liquidity transaction
-        add_liq_tx = router_contract.functions.addLiquidity(
-            config["usdc_address"],
-            config["wcbtc_address"],
-            Web3.to_checksum_address("0x0000000000000000000000000000000000000000"), # deployer - often zero address for standard routers
-            account.address,
-            usdc_amount_to_add_wei,
-            wcbtc_amount_to_add_wei,
-            amount_usdc_min,
-            amount_wcbtc_min,
-            deadline
-        ).build_transaction({
-            "from": account.address,
-            "gas": 0x90543, # Updated gas limit from user's provided data for "create position"
-            "gasPrice": 0xb71b78, # Updated gas price from user's provided data for "create position"
-            "nonce": w3.eth.get_transaction_count(account.address),
-            "chainId": config["chain_id"]
-        })
-                
-        # Sign and send transaction
-        signed_tx = w3.eth.account.sign_transaction(add_liq_tx, private_key=account.key)
-        tx_hash = w3.eth.send_raw_transaction(signed_tx.raw_transaction)
-        console.print("[yellow]> Adding liquidity...[/yellow]")
-        receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
-                
-        if receipt["status"] == 1:
-            console.print(f"[green]+ Liquidity added successfully! Tx: {config['explorer']}/tx/{tx_hash.hex()}[/green]")
-        else:
-            console.print("[red]- Liquidity add transaction failed[/red]")
-            try:
-                # Attempt to decode revert reason (this part is hard to make reliable on public RPCs)
-                console.print(f"[cyan]Transaction receipt: {receipt}[/cyan]")
-            except Exception as e:
-                console.print(f"[red]- Error decoding revert reason: {str(e)}[/red]")
+        await send_custom_transaction(w3, config, account, to_address, data_hex, value_wei, gas_limit, gas_price_wei, "Add Liquidity (Fixed Amounts)")
                 
     except Exception as e: # Outer exception handler for add_lp_satsuma
         console.print(f"[red]- Error adding liquidity: {str(e)}[/red]")
