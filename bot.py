@@ -689,20 +689,28 @@ async def add_lp_satsuma(w3, config, private_key):
                 return
 
             # Calculate required WCBTC based on 50:50 ratio of current pool
-            # (AmountA / ReserveA) = (AmountB / ReserveB) => AmountB = (AmountA * ReserveB) / ReserveA
-            if reserve_usdc == 0:
-                console.print("[red]- USDC reserve in pool is zero. Cannot calculate WCBTC ratio. Aborting LP add.[/red]")
-                return
+            # We need to be careful with integer division and decimals.
+            # USDC has 6 decimals, WCBTC has 18 decimals.
+            # Target: amount_wcbtc_wei / 10^18 = (amount_usdc_wei / 10^6) * (reserve_wcbtc / 10^18) / (reserve_usdc / 10^6)
+            # Simplified: amount_wcbtc_wei = (amount_usdc_wei * reserve_wcbtc * 10^12) / reserve_usdc
             
-            # Scale reserves to common decimal for ratio calculation (e.g., 18 decimals)
-            # Assuming USDC is 6 decimals, WCBTC is 18 decimals
-            scaled_reserve_usdc = reserve_usdc * (10**(18-6)) # Scale USDC to 18 decimals for ratio
-            scaled_reserve_wcbtc = reserve_wcbtc
+            # Use floating point for intermediate calculation to maintain precision
+            # Ensure reserves are not zero to avoid division by zero
+            if reserve_usdc == 0 or reserve_wcbtc == 0:
+                console.print(f"[red]- One or both pool reserves are zero (USDC: {reserve_usdc}, WCBTC: {reserve_wcbtc}). Cannot calculate ratio. Aborting LP add.[/red]")
+                return
 
-            wcbtc_amount_to_add_wei = int((usdc_amount_to_add_wei * scaled_reserve_wcbtc) / scaled_reserve_usdc)
+            wcbtc_amount_to_add_float = (usdc_amount_to_add_wei * reserve_wcbtc * (10**12)) / reserve_usdc
+            wcbtc_amount_to_add_wei = int(wcbtc_amount_to_add_float)
+
             wcbtc_amount_to_add = wcbtc_amount_to_add_wei / 10**18
 
-            console.print(f"[green]+ Calculated WCBTC needed for {usdc_amount_to_add} USDC: {wcbtc_amount_to_add:.10f} WCBTC[/green]")
+            console.print(f"[green]+ Raw Reserves: USDC={reserve_usdc}, WCBTC={reserve_wcbtc}[/green]")
+            console.print(f"[green]+ Calculated WCBTC needed for {usdc_amount_to_add} USDC: {wcbtc_amount_to_add:.18f} WCBTC (raw wei: {wcbtc_amount_to_add_wei})[/green]")
+
+            if wcbtc_amount_to_add_wei == 0:
+                console.print("[red]- Calculated WCBTC amount is zero. This might happen if the pool ratio is extremely skewed or the USDC amount is too small. Aborting LP add.[/red]")
+                return
 
         except Exception as e:
             console.print(f"[red]- Failed to fetch pool reserves or calculate ratio: {str(e)}. Please ensure 'satsuma_pool_address' is correct and the pool has liquidity. Aborting LP add.[/red]")
@@ -851,7 +859,7 @@ async def claim_lp_reward(w3, config, private_key):
 
     # Transaction details from user's provided data
     to_address = config["satsuma_lp_reward_contract_address"]
-    data_hex = "0xfc6f7865000000000000000000000000000000000000000000000000000000000000000000000000000000000000000007f8ec2b79b7a1998fd0b21a4668b0cf1ca72c0200000000000000000000000000000000ffffffffffffffffffffffffffffffff00000000000000000000000000000000ffffffffffffffffffffffffffffffff"
+    data_hex = "0xfc6f7865000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000038d7ea4c68000000000000000000000000000000000000000000000000002b5e3af16b188000000000000000000000000000000000000000000000000000000b1a2bc2ec5000000000000000000000000000000000000000000000000000000000000000000a00000000000000000000000000000000000000000000000000000000000000000"
     value_wei = 0x0
     gas_limit = 0x1e8480 # from user's data
     gas_price_wei = 0xb71b78 # from user's data
