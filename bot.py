@@ -793,17 +793,28 @@ async def add_lp_satsuma(w3, config, private_key):
         nfpm_contract = w3.eth.contract(address=config["satsuma_lp_reward_contract_address"], abi=NONFUNGIBLE_POSITION_MANAGER_ABI)
         deadline = int(time.time()) + 20 * 60 # 20 minutes
 
-        # Define slippage tolerance (e.g., 0.5%)
-        slippage_tolerance = 0.005
+        # Get slippage tolerance from user
+        while True:
+            try:
+                slippage_percent_str = console.input("[bold magenta]> Enter slippage tolerance percentage (e.g., 0.5 for 0.5%): [/bold magenta]")
+                slippage_percent = float(slippage_percent_str)
+                if not (0 <= slippage_percent < 100): # Allow up to almost 100% for testnet if needed
+                    console.print("[red]- Slippage percentage must be between 0 and 100. Please enter a valid number.[/red]")
+                    continue
+                break
+            except ValueError:
+                console.print("[red]- Invalid input. Please enter a valid number.[/red]")
+        slippage_tolerance = slippage_percent / 100.0
+
         amount_usdc_min = int(usdc_amount_to_add_wei * (1 - slippage_tolerance))
         amount_wcbtc_min = int(wcbtc_amount_to_add_wei * (1 - slippage_tolerance))
 
         console.print(f"[green]+ Adding {usdc_amount_to_add:.6f} USDC and {wcbtc_amount_to_add:.10f} WCBTC to LP.[/green]")
-        console.print(f"[green]+ Minimum amounts (with {slippage_tolerance*100}% slippage): USDC={amount_usdc_min / 10**6:.6f}, WCBTC={amount_wcbtc_min / 10**18:.10f}[/green]")
+        console.print(f"[green]+ Minimum amounts (with {slippage_percent}% slippage): USDC={amount_usdc_min / 10**6:.6f}, WCBTC={amount_wcbtc_min / 10**18:.10f}[/green]")
 
         # --- Dynamically build the 'mint' call for the NonfungiblePositionManager ---
         # Using fee_tier 3000 (0.3%) from your successful transaction analysis
-        # Using full range ticks for general dynamic add.
+        # Using specific ticks from your successful transaction analysis
         fee_tier = 3000 # Correct fee tier from your analysis (0.3%)
         tick_lower = 0 # From your successful transaction's decoded data
         tick_upper = 370720 # From your successful transaction's decoded data
