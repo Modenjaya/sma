@@ -689,10 +689,8 @@ async def add_lp_satsuma(w3, config, private_key):
                 return
 
             # Calculate required WCBTC based on 50:50 ratio of current pool
-            # We need to be careful with integer division and decimals.
-            # USDC has 6 decimals, WCBTC has 18 decimals.
-            # Target: amount_wcbtc_wei / 10^18 = (amount_usdc_wei / 10^6) * (reserve_wcbtc / 10^18) / (reserve_usdc / 10^6)
-            # Simplified: amount_wcbtc_wei = (amount_usdc_wei * reserve_wcbtc * 10^12) / reserve_usdc
+            # Correct formula: Amount_WCBTC_wei = (Amount_USDC_wei * Reserve_WCBTC_wei) / Reserve_USDC_wei
+            # This correctly handles the decimal differences because all values are in their respective wei units.
             
             # Use floating point for intermediate calculation to maintain precision
             # Ensure reserves are not zero to avoid division by zero
@@ -700,7 +698,7 @@ async def add_lp_satsuma(w3, config, private_key):
                 console.print(f"[red]- One or both pool reserves are zero (USDC: {reserve_usdc}, WCBTC: {reserve_wcbtc}). Cannot calculate ratio. Aborting LP add.[/red]")
                 return
 
-            wcbtc_amount_to_add_float = (usdc_amount_to_add_wei * reserve_wcbtc * (10**12)) / reserve_usdc
+            wcbtc_amount_to_add_float = (usdc_amount_to_add_wei * reserve_wcbtc) / reserve_usdc # FIX: Removed the extra *(10**12)
             wcbtc_amount_to_add_wei = int(wcbtc_amount_to_add_float)
 
             wcbtc_amount_to_add = wcbtc_amount_to_add_wei / 10**18
