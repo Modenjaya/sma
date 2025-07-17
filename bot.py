@@ -48,19 +48,20 @@ def display_menu():
         "2. Deposit NUSD (Nectra)",
         "3. Swap cBTC (Citrea Native) to NUSD (Satsuma)",
         "4. Swap USDC to SUMA (Satsuma) - Interactive",
-        "5. Add Liquidity (WCBTC + USDC) (Satsuma)", # Updated option text
-        "6. Convert SUMA to veSUMA (Satsuma)",
-        "7. Stake veSUMA (Satsuma)",
-        "8. Claim LP Reward (Satsuma)",
-        "9. Run All Features",
-        "10. Exit"
+        "5. Swap USDC to WCBTC (Satsuma) - Interactive", # New option
+        "6. Add Liquidity (WCBTC + USDC) (Satsuma)", # Updated option text
+        "7. Convert SUMA to veSUMA (Satsuma)",
+        "8. Stake veSUMA (Satsuma)",
+        "9. Claim LP Reward (Satsuma)",
+        "10. Run All Features",
+        "11. Exit" # Updated exit option
     ]
     
     for opt in options:
         table.add_row(opt)
     
     console.print(table)
-    choice = console.input("[bold magenta]> Select option (1-10): [/bold magenta]")
+    choice = console.input("[bold magenta]> Select option (1-11): [/bold magenta]")
     return choice
 
 # Load or initialize user settings (from previous script, adapted)
@@ -528,6 +529,85 @@ async def swap_usdc_to_suma_interactive(w3, config, private_key):
     except Exception as e:
         console.print(f"[red]- Error during USDC to SUMA swap: {str(e)}[/red]")
 
+async def swap_usdc_to_wcbtc_interactive(w3, config, private_key):
+    try:
+        account = w3.eth.account.from_key(private_key)
+        console.print(f"[blue]=== Processing interactive USDC to WCBTC swap for address: {account.address} ===[/blue]")
+
+        while True:
+            try:
+                usdc_amount_str = console.input("[bold magenta]> Enter the amount of USDC to swap (e.g., 10.0): [/bold magenta]")
+                usdc_amount = float(usdc_amount_str)
+                if usdc_amount <= 0:
+                    console.print("[red]- Amount must be positive. Please enter a valid number.[/red]")
+                    continue
+                break
+            except ValueError:
+                console.print("[red]- Invalid input. Please enter a valid number.[/red]")
+
+        console.print(f"[green]+ Amount to swap: {usdc_amount} USDC[/green]")
+
+        usdc_contract = w3.eth.contract(address=config["usdc_address"], abi=ERC20_ABI)
+        wcbtc_contract = w3.eth.contract(address=config["wcbtc_address"], abi=ERC20_ABI)
+
+        usdc_balance = usdc_contract.functions.balanceOf(account.address).call()
+        console.print(f"[green]+ Current USDC balance: {usdc_balance / 10**6:.6f} USDC[/green]")
+
+        amount_in_usdc_wei = int(usdc_amount * 10**6) # USDC has 6 decimals
+        if usdc_balance < amount_in_usdc_wei:
+            console.print(f"[red]- Insufficient USDC balance. Needed: {usdc_amount} USDC, Available: {usdc_balance / 10**6:.6f} USDC[/red]")
+            return
+
+        # Approve USDC for the swap router
+        approval_result = await approve_token(w3, config, account, config["satsuma_swap_router_address"], amount_in_usdc_wei)
+        if not approval_result["success"]:
+            console.print("[red]- Skipping swap due to USDC approval failure[/red]")
+            return
+
+        swap_router = w3.eth.contract(address=config["satsuma_swap_router_address"], abi=SWAP_ROUTER_ABI)
+        deadline = int(time.time()) + 20 * 60 # 20 minutes from now
+
+        # Parameters for exactInputSingle (USDC to WCBTC)
+        params_usdc_wcbtc = (
+            config["usdc_address"], # tokenIn
+            config["wcbtc_address"], # tokenOut
+            Web3.to_checksum_address("0x0000000000000000000000000000000000000000"), # deployer (as per user's data)
+            account.address, # recipient
+            deadline,
+            amount_in_usdc_wei, # dynamic amount from user input
+            0, # amountOutMinimum (set to 0 for simplicity, consider adding slippage)
+            0  # limitSqrtPrice (set to 0 for simplicity)
+        )
+
+        console.print("[yellow]> Sending USDC -> WCBTC transaction...[/yellow]")
+        usdc_wcbtc_tx = swap_router.functions.exactInputSingle(params_usdc_wcbtc).build_transaction({
+            "from": account.address,
+            "value": 0, # Value is 0x0 as per user's provided data
+            "gas": 0x41dec, # Fixed gas limit from user's provided data
+            "gasPrice": 0xb71b78, # Fixed gas price from user's provided data
+            "nonce": w3.eth.get_transaction_count(account.address),
+            "chainId": config["chain_id"]
+        })
+
+        signed_tx = w3.eth.account.sign_transaction(usdc_wcbtc_tx, private_key=account.key)
+        tx_hash = w3.eth.send_raw_transaction(signed_tx.raw_transaction)
+        console.print("[yellow]> Waiting for USDC -> WCBTC transaction confirmation...[/yellow]")
+        receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
+
+        if receipt["status"] == 1:
+            console.print(f"[green]+ USDC -> WCBTC swap successful! Tx: {config['explorer']}/tx/{tx_hash.hex()}[/green]")
+        else:
+            console.print(f"[red]- USDC -> WCBTC transaction failed! Tx: {config['explorer']}/tx/{tx_hash.hex()}[/red]")
+            console.print(f"[cyan]Transaction receipt: {receipt}[/cyan]")
+            return
+
+        # Display WCBTC received
+        wcbtc_balance_after_swap = wcbtc_contract.functions.balanceOf(account.address).call()
+        console.print(f"[green]+ Current WCBTC balance: {wcbtc_balance_after_swap / 10**18:.6f} WCBTC[/green]")
+
+    except Exception as e:
+        console.print(f"[red]- Error during USDC to WCBTC swap: {str(e)}[/red]")
+
 async def wrap_cbtc(w3, config, account, amount_cbtc):
     """
     Wraps native cBTC to WCBTC.
@@ -786,10 +866,9 @@ async def run_all_features(w3, config, private_keys):
         await asyncio.sleep(random.uniform(10, 20))
 
         # Satsuma Actions
-        # swap_usdc_to_suma_interactive is not included because it requires user input
+        # Interactive swaps and LP add are not included in run_all_features
         await swap_cbtc_to_nusd(w3, config, private_key)
         await asyncio.sleep(random.uniform(10, 20))
-        # add_lp_satsuma is not included in run_all_features as it's interactive and complex
         await convert_suma_to_vesuma(w3, config, private_key)
         await asyncio.sleep(random.uniform(10, 20))
         await stake_vesuma(w3, config, private_key)
@@ -816,7 +895,7 @@ async def main():
             choice = display_menu()
             try:
                 option = int(choice)
-                if option == 10: # Updated exit option
+                if option == 11: # Updated exit option
                     console.print("[yellow]> Exiting Satsuma & Nectra Bot...[/yellow]")
                     sys.exit(0)
                 elif option == 1:
@@ -831,30 +910,34 @@ async def main():
                     for private_key in private_keys:
                         await swap_cbtc_to_nusd(w3, config, private_key)
                         await asyncio.sleep(random.uniform(5, 10))
-                elif option == 4: # New option for Interactive USDC to SUMA Swap
+                elif option == 4: # Interactive USDC to SUMA Swap
                     for private_key in private_keys:
                         await swap_usdc_to_suma_interactive(w3, config, private_key)
                         await asyncio.sleep(random.uniform(5, 10))
-                elif option == 5: # Updated option for Add Liquidity
+                elif option == 5: # New option for Interactive USDC to WCBTC Swap
+                    for private_key in private_keys:
+                        await swap_usdc_to_wcbtc_interactive(w3, config, private_key)
+                        await asyncio.sleep(random.uniform(5, 10))
+                elif option == 6: # Add Liquidity
                     for private_key in private_keys:
                         await add_lp_satsuma(w3, config, private_key)
                         await asyncio.sleep(random.uniform(5, 10))
-                elif option == 6:
+                elif option == 7:
                     for private_key in private_keys:
                         await convert_suma_to_vesuma(w3, config, private_key)
                         await asyncio.sleep(random.uniform(5, 10))
-                elif option == 7:
+                elif option == 8:
                     for private_key in private_keys:
                         await stake_vesuma(w3, config, private_key)
                         await asyncio.sleep(random.uniform(5, 10))
-                elif option == 8: # Option for Claim LP Reward
+                elif option == 9: # Option for Claim LP Reward
                     for private_key in private_keys:
                         await claim_lp_reward(w3, config, private_key)
                         await asyncio.sleep(random.uniform(5, 10))
-                elif option == 9: # Option for Run All Features
+                elif option == 10: # Option for Run All Features
                     await run_all_features(w3, config, private_keys)
                 else:
-                    console.print("[red]- Invalid option. Please select 1-10.[/red]")
+                    console.print("[red]- Invalid option. Please select 1-11.[/red]")
             except ValueError:
                 console.print("[red]- Invalid input. Please enter a number.[/red]")
             except Exception as e:
