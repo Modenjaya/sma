@@ -93,10 +93,10 @@ def load_config():
     console.print("[yellow]> Loading configuration...[/yellow]", justify="center")
     
     config = {
-        "rpc": "[https://rpc.testnet.citrea.xyz](https://rpc.testnet.citrea.xyz)",
+        "rpc": "https://rpc.testnet.citrea.xyz",
         "chain_id": 5115,
         "symbol": "cBTC",
-        "explorer": "[https://explorer.testnet.citrea.xyz](https://explorer.testnet.citrea.xyz)",
+        "explorer": "https://explorer.testnet.citrea.xyz",
         # Satsuma Exchange Contracts (from previous script and user's new data)
         "satsuma_swap_router_address": Web3.to_checksum_address("0x3012e9049d05b4b5369d690114d5a5861ebb85cb"), # Contract for swaps
         "satsuma_lp_manager_address": Web3.to_checksum_address("0xcA3534C15Cc22535BF880Ba204c69340f813730b"), # Contract for adding LP
