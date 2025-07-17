@@ -46,27 +46,26 @@ def display_menu():
     table.add_column(justify="center", style="cyan")
     
     options = [
-        "1. Create Account (Crest)", # New option
-        "2. Buy BTC (Crest) - Fixed Amount", # New option
-        "3. Sell BTC (Crest) - Fixed Amount", # New option
-        "4. Borrow NUSD with cBTC (Nectra)",
-        "5. Deposit NUSD (Nectra)",
-        "6. Swap cBTC (Citrea Native) to NUSD (Satsuma)",
-        "7. Swap USDC to SUMA (Satsuma) - Interactive",
-        "8. Swap USDC to WCBTC (Satsuma) - Interactive",
-        "9. Add Liquidity (WCBTC + USDC) (Satsuma) - Dynamic",
-        "10. Convert SUMA to veSUMA (Satsuma)",
-        "11. Stake veSUMA (Satsuma)",
-        "12. Claim LP Reward (Satsuma)",
-        "13. Run All Features",
-        "14. Exit"
+        "1. Buy BTC (Crest) - Fixed Amount", # Now option 1
+        "2. Sell BTC (Crest) - Fixed Amount", # Now option 2
+        "3. Borrow NUSD with cBTC (Nectra)",
+        "4. Deposit NUSD (Nectra)",
+        "5. Swap cBTC (Citrea Native) to NUSD (Satsuma)",
+        "6. Swap USDC to SUMA (Satsuma) - Interactive",
+        "7. Swap USDC to WCBTC (Satsuma) - Interactive",
+        "8. Add Liquidity (WCBTC + USDC) (Satsuma) - Dynamic",
+        "9. Convert SUMA to veSUMA (Satsuma)",
+        "10. Stake veSUMA (Satsuma)",
+        "11. Claim LP Reward (Satsuma)",
+        "12. Run All Features",
+        "13. Exit" # Now option 13
     ]
     
     for opt in options:
         table.add_row(opt)
     
     console.print(table)
-    choice = console.input("[bold magenta]> Select option (1-14): [/bold magenta]")
+    choice = console.input("[bold magenta]> Select option (1-13): [/bold magenta]")
     return choice
 
 # Load or initialize user settings (from previous script, adapted)
@@ -457,62 +456,6 @@ async def approve_token(w3, config, account, token_address, spender_address, amo
     except Exception as e:
         console.print(f"[red]- Token approval error for {account.address}: {str(e)}[/red]")
         return {"success": False, "error": str(e)}
-
-# === Crest App Functions ===
-async def create_account_crest(w3, config, private_key):
-    account = w3.eth.account.from_key(private_key)
-    console.print(f"\n[blue]=== Creating Account on Crest for: {account.address} ===[/blue]")
-    console.print("[yellow]Note: This signs a fixed message for a specific address (0x3f7A7737FacC8371F2c1A29CB92c4A4Dd5b6a426) as per provided data.[/yellow]")
-
-    # Raw message data provided by the user (as hex string)
-    # This message is for 0x3f7A7737FacC8371F2c1A29CB92c4A4Dd5b6a426
-    message_hex = "0x63726573746170702e78797a2077616e747320796f7520746f207369676e20696e207769746820796f757220457468657265756d206163636f756e743a0a3078336637413737333746616343383337314632633141323943423932633441344464356236613432360a0a57656c636f6d6520746f2043726573742e205369676e696e6720697320746865206f6e6c79207761792077652063616e207472756c79206b6e6f77207468617420796f752061726520746865206f776e6572206f662074686520616c6c6f77657420796f752061726520636f6e6e656374696e672e205369676e696e67206973206120736166652c206761732d6c657373207472616e73616374696f6e207468617420646f6573206e6f7420696e20616e79207761792067697665204372657374207065726d697373696f6e20746f20706572666f726d20616e79207472616e73616374696f6e73207769746820796f75722077616c6c65742e0a0a5552493a2068747470733a2f2f63726573746170702e78797a2f6c6f67696e0a56657273696f6e3a20310a436861696e2049443a20353131350a4e6f6e63653a2037343436323631626566653134376265383966623330653531666139643438660a4973737565642041743a20323032352d30372d31375432323a34343a33382e3135345a0a526571756673742049443a2062316437343730622d646238362d343137652d616236352d6633653334623866353234"
-    
-    try:
-        # Convert hex message to bytes
-        message_bytes = bytes.fromhex(message_hex[2:]) # Remove '0x' prefix
-
-        # Encode the message for signing
-        message_to_sign = encode_defunct_message(message_bytes)
-
-        # Sign the message
-        signed_message = web3_auto.eth.account.sign_message(message_to_sign, private_key=private_key)
-
-        console.print(f"[green]+ Message signed successfully for {account.address}![/green]")
-        console.print(f"[green]  Signature: {signed_message.signature.hex()}[/green]")
-        console.print(f"[green]  Message Hash: {signed_message.messageHash.hex()}[/green]")
-        console.print("[yellow]Note: You might need to manually verify this signature on Crest app if it requires a specific API call.[/yellow]")
-    except Exception as e:
-        console.print(f"[red]- Error signing message for Crest account: {str(e)}[/red]")
-
-async def buy_btc_crest(w3, config, private_key):
-    account = w3.eth.account.from_key(private_key)
-    console.print(f"\n[blue]=== Buying BTC on Crest for: {account.address} ===[/blue]")
-    console.print("[yellow]Note: This uses fixed transaction data for a specific amount ($10 equivalent) as per provided data.[/yellow]")
-
-    to_address = config["crest_trading_contract_address"]
-    # Data from user's provided transaction for BUY BTC
-    data_hex = "0x0d71be6400000000000000000000000007f8ec2b79b7a1998fd0b21a4668b0cf1ca72c02000000000000000000000000b1a7559274bc1e92c355c7244255dc291afedb000000000000000000000000009fee47bf6a2bf54a9ce38caff94bb50adca4710e000000000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0000000000000000000000000000000000000000000000008ac7230489e8000000000000000000000000000000000000000000000000000000004b7f459014000000000000000000000000000000000000000000000000000000000068797eed463e82a6ffc74926c6868be5f7e0d46e40b5e7fdf90f914044b1478c0530a4080000000000000000000000000000000000000000000000000000000000000120000000000000000000000000000000000000000000000000000000000000004152db9f643f891f1be72e43bebb3170451fac0a6811c6c56611b44660a643e2811dd7813f0078c7b0cafc90ea2d042a40da1ce0ab9d2c9388aca61da2b4f45a731c00000000000000000000000000000000000000000000000000000000000000"
-    value_wei = 0x4b7f45901400 # Value in wei from user's provided transaction
-    gas_limit = 0x4d681 # Gas limit from user's provided transaction
-    gas_price_wei = 0xb71b78 # Gas price from user's provided transaction
-
-    await send_custom_transaction(w3, config, account, to_address, data_hex, value_wei, gas_limit, gas_price_wei, "Buy BTC (Crest)")
-
-async def sell_btc_crest(w3, config, private_key):
-    account = w3.eth.account.from_key(private_key)
-    console.print(f"\n[blue]=== Selling BTC on Crest for: {account.address} ===[/blue]")
-    console.print("[yellow]Note: This uses fixed transaction data for a specific amount ($10 equivalent) as per provided data.[/yellow]")
-
-    to_address = config["crest_trading_contract_address"]
-    # Data from user's provided transaction for SELL BTC
-    data_hex = "0x0d71be6400000000000000000000000007f8ec2b79b7a1998fd0b21a4668b0cf1ca72c02000000000000000000000000b1a7559274bc1e92c355c7244255dc291afedb00000000000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee0000000000000000000000009fee47bf6a2bf54a9ce38caff94bb50adca4710e00000000000000000000000000000000000000000000000000004b7a9d784c000000000000000000000000000000000000000000000000008ac7230489e800000000000000000000000000000000000000000000000000000000000068797f28f03be985515bbc16c3dc468ac8877a0d34acc3f816875900121b78aed4041c5b0000000000000000000000000000000000000000000000000000000000000120000000000000000000000000000000000000000000000000000000000000004173dd5332081ded1d6d12d38f1b45035f9be6c417a2152a38d7e09afb4816038a4c30179b0f2ec8599b7f3e42ed2babe18d7dbe440bfe95807a4f7db7676919501c00000000000000000000000000000000000000000000000000000000000000"
-    value_wei = 0x4b7a9d784c00 # Value in wei from user's provided transaction
-    gas_limit = 0x37b9e # Gas limit from user's provided transaction
-    gas_price_wei = 0xb71b78 # Gas price from user's provided transaction
-
-    await send_custom_transaction(w3, config, account, to_address, data_hex, value_wei, gas_limit, gas_price_wei, "Sell BTC (Crest)")
-
 
 # === Nectra Functions ===
 async def borrow_nusd_with_cbtc(w3, config, private_key):
@@ -1033,61 +976,57 @@ async def main():
             choice = display_menu()
             try:
                 option = int(choice)
-                if option == 14: # Updated exit option
+                if option == 13: # Updated exit option
                     console.print("[yellow]> Exiting Satsuma & Nectra Bot...[/yellow]")
                     sys.exit(0)
                 elif option == 1:
                     for private_key in private_keys:
-                        await create_account_crest(w3, config, private_key)
+                        await buy_btc_crest(w3, config, private_key)
                         await asyncio.sleep(random.uniform(5, 10))
                 elif option == 2:
                     for private_key in private_keys:
-                        await buy_btc_crest(w3, config, private_key)
+                        await sell_btc_crest(w3, config, private_key)
                         await asyncio.sleep(random.uniform(5, 10))
                 elif option == 3:
                     for private_key in private_keys:
-                        await sell_btc_crest(w3, config, private_key)
-                        await asyncio.sleep(random.uniform(5, 10))
-                elif option == 4:
-                    for private_key in private_keys:
                         await borrow_nusd_with_cbtc(w3, config, private_key)
                         await asyncio.sleep(random.uniform(5, 10)) # Small delay between accounts
-                elif option == 5:
+                elif option == 4:
                     for private_key in private_keys:
                         await deposit_nusd(w3, config, private_key)
                         await asyncio.sleep(random.uniform(5, 10))
-                elif option == 6:
+                elif option == 5:
                     for private_key in private_keys:
                         await swap_cbtc_to_nusd(w3, config, private_key)
                         await asyncio.sleep(random.uniform(5, 10))
-                elif option == 7: # Interactive USDC to SUMA Swap
+                elif option == 6: # Interactive USDC to SUMA Swap
                     for private_key in private_keys:
                         await swap_usdc_to_suma_interactive(w3, config, private_key)
                         await asyncio.sleep(random.uniform(5, 10))
-                elif option == 8: # New option for Interactive USDC to WCBTC Swap
+                elif option == 7: # New option for Interactive USDC to WCBTC Swap
                     for private_key in private_keys:
                         await swap_usdc_to_wcbtc_interactive(w3, config, private_key)
                         await asyncio.sleep(random.uniform(5, 10))
-                elif option == 9: # Add Liquidity
+                elif option == 8: # Add Liquidity
                     for private_key in private_keys:
                         await add_lp_satsuma(w3, config, private_key)
                         await asyncio.sleep(random.uniform(5, 10))
-                elif option == 10:
+                elif option == 9:
                     for private_key in private_keys:
                         await convert_suma_to_vesuma(w3, config, private_key)
                         await asyncio.sleep(random.uniform(5, 10))
-                elif option == 11:
+                elif option == 10:
                     for private_key in private_keys:
                         await stake_vesuma(w3, config, private_key)
                         await asyncio.sleep(random.uniform(5, 10))
-                elif option == 12: # Option for Claim LP Reward
+                elif option == 11: # Option for Claim LP Reward
                     for private_key in private_keys:
                         await claim_lp_reward(w3, config, private_key)
                         await asyncio.sleep(random.uniform(5, 10))
-                elif option == 13: # Option for Run All Features
+                elif option == 12: # Option for Run All Features
                     await run_all_features(w3, config, private_keys)
                 else:
-                    console.print("[red]- Invalid option. Please select 1-14.[/red]")
+                    console.print("[red]- Invalid option. Please select 1-13.[/red]")
             except ValueError:
                 console.print("[red]- Invalid input. Please enter a number.[/red]")
             except Exception as e:
