@@ -35,7 +35,7 @@ def display_banner():
         console.print(f"[yellow]> Initializing{'.' * (_ % 4)}[/yellow]", justify="center", end="\r")
         time.sleep(0.3)
     console.print(" " * 50, end="\r")
-    console.print(f"[green]+ Satsuma & Nectra Bot - CREATED BY Alloidn[/green]", justify="center")
+    console.print(f"[green]+ CITREA TASK - CREATED BY MODEN[/green]", justify="center")
     console.print("-" * 50, style="green", justify="center")
 
 # === CLI Menu ===
