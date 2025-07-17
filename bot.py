@@ -21,22 +21,21 @@ CONFIG_FILE = "satsuma_config.json"
 # === Animated Banner ===
 def display_banner():
     banner_text = """
-██╗  ██╗ ██████╗ ███╗   ██╗████████╗ ██████╗ ██╗     
-██║ ██╔╝██╔═══██╗████╗  ██║╚══██╔══╝██╔═══██╗██║     
-█████╔╝ ██║   ██║██╔██╗ ██║   ██║   ██║   ██║██║     
-██╔═██╗ ██║   ██║██║╚██╗██║   ██║   ██║   ██║██║     
-██║  ██╗╚██████╔╝██║ ╚████║   ██║   ╚██████╔╝███████╗
-╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═══╝   ╚═╝    ╚═════╝ ╚══════╝
-
-    """  # LU KONTOL in ASCII
+███████╗ █████╗ ████████╗███████╗██╗   ██║███╗   ███╗ █████╗ 
+██╔════╝██╔══██╗╚══██╔══╝██╔════╝██║   ██║████╗ ████║██╔══██╗
+███████╗███████║   ██║   ███████╗██║   ██║██╔████╔██║███████║
+╚════██║██╔══██║   ██║   ╚════██║██║   ██║██║╚██╔╝██║██╔══██║
+███████║██║  ██║   ██║   ███████║╚██████╔╝██║ ╚═╝ ██║██║  ██║
+╚══════╝╚═╝  ╚═╝   ╚═╝   ╚══════╝ ╚═════╝ ╚═╝     ╚═╝╚═╝  ╚═╝
+    """
     console.print(f"[bold cyan]{banner_text}[/bold cyan]", justify="center")
-    console.print(f"[bold green]L E T S - F U C K - T H I S - T E S T N E T [/bold green]", justify="center")
+    console.print(f"[bold green]K-O-N-T-O-L [/bold green]", justify="center")
     console.print("-" * 50, style="green", justify="center")
     for _ in range(3):
         console.print(f"[yellow]> Initializing{'.' * (_ % 4)}[/yellow]", justify="center", end="\r")
         time.sleep(0.3)
     console.print(" " * 50, end="\r")
-    console.print(f"[green]+ Satsuma & Nectra Bot - CREATED BY Alloidn[/green]", justify="center")
+    console.print(f"[green]+ SATSUMA TASK - CREATED BY MODEN [/green]", justify="center")
     console.print("-" * 50, style="green", justify="center")
 
 # === CLI Menu ===
@@ -47,8 +46,8 @@ def display_menu():
     options = [
         "1. Borrow NUSD with cBTC (Nectra)",
         "2. Deposit NUSD (Nectra)",
-        "3. Swap cBTC/WCBTC to NUSD (Satsuma)",
-        "4. Swap USDC to SUMA (Satsuma) - Interactive", # New option
+        "3. Swap cBTC (Citrea Native) to NUSD (Satsuma)", # Updated option text
+        "4. Swap USDC to SUMA (Satsuma) - Interactive",
         "5. Add LP for USDC (Satsuma)",
         "6. Convert SUMA to veSUMA (Satsuma)",
         "7. Stake veSUMA (Satsuma)",
@@ -434,7 +433,7 @@ async def deposit_nusd(w3, config, private_key):
 # === Satsuma Functions ===
 async def swap_cbtc_to_nusd(w3, config, private_key):
     account = w3.eth.account.from_key(private_key)
-    console.print(f"\n[blue]=== Swapping cBTC/WCBTC to NUSD for: {account.address} ===[/blue]")
+    console.print(f"\n[blue]=== Swapping cBTC (Citrea Native) to NUSD for: {account.address} ===[/blue]")
 
     # Transaction details from user's provided data
     to_address = config["satsuma_swap_router_address"]
@@ -443,15 +442,10 @@ async def swap_cbtc_to_nusd(w3, config, private_key):
     gas_limit = 0x52a19 # from user's data
     gas_price_wei = 0xb71b78 # from user's data
 
-    # The data implies a WCBTC -> NUSD swap. Need to approve WCBTC for the router.
-    # The amount to approve is 0.1 WCBTC (from the data: 0x1981a0a6fd5)
-    wcbtc_amount_in_data = 0x1981a0a6fd5
-    approval_result = await approve_token(w3, config, account, config["wcbtc_address"], to_address, wcbtc_amount_in_data)
-    if not approval_result["success"]:
-        console.print("[red]- WCBTC approval failed. Aborting swap.[/red]")
-        return
+    # No approval needed for native cBTC, it's sent via 'value'
+    # The router contract is expected to handle the wrapping of cBTC to WCBTC internally.
 
-    await send_custom_transaction(w3, config, account, to_address, data_hex, value_wei, gas_limit, gas_price_wei, "Swap cBTC/WCBTC to NUSD")
+    await send_custom_transaction(w3, config, account, to_address, data_hex, value_wei, gas_limit, gas_price_wei, "Swap cBTC to NUSD")
 
 async def swap_usdc_to_suma_interactive(w3, config, private_key):
     try:
