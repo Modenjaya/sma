@@ -21,10 +21,10 @@ CONFIG_FILE = "satsuma_config.json"
 # === Animated Banner ===
 def display_banner():
     banner_text = """
-███████╗ █████╗ ████████╗███████╗██╗   ██║███╗   ███╗ █████╗
-██╔════╝██╔══██╗╚══██╔══╝██╔════╝██║   ██║████╗ ████║██╔══██╗
-███████╗███████║  ██║   ███████╗██║   ██║██╔████╔██║███████║
-╚════██║██╔══██║  ██║   ╚════██║██║   ██║██║╚██╔╝██║██╔══██║
+███████╗ █████╗ ████████╗███████╗██╗    ██║███╗   ███╗ █████╗
+██╔════╝██╔══██╗╚══██╔══╝██╔════╝██║    ██║████╗ ████║██╔══██╗
+███████╗███████║  ██║   ███████╗██║    ██║██╔████╔██║███████║
+╚════██║██╔══██║  ██║   ╚════██║██║    ██║██║╚██╔╝██║██╔══██║
 ███████║██║  ██║  ██║   ███████║╚██████╔╝██║ ╚═╝ ██║██║  ██║
 ╚══════╝╚═╝  ╚═╝  ╚═╝   ╚══════╝  ╚═════╝ ╚═╝     ╚═╝╚═╝  ╚═╝
     """
@@ -46,22 +46,23 @@ def display_menu():
     options = [
         "1. Borrow NUSD with cBTC (Nectra)",
         "2. Deposit NUSD (Nectra)",
-        "3. Swap cBTC (Citrea Native) to NUSD (Satsuma)",
-        "4. Swap USDC to SUMA (Satsuma) - Interactive",
-        "5. Swap USDC to WCBTC (Satsuma) - Interactive",
-        "6. Add Liquidity (WCBTC + USDC) (Satsuma) - Fixed Amounts", # Updated option text
-        "7. Convert SUMA to veSUMA (Satsuma)",
-        "8. Stake veSUMA (Satsuma)",
-        "9. Claim LP Reward (Satsuma)",
-        "10. Run All Features",
-        "11. Exit"
+        "3. Claim Nectra Reward", # New option
+        "4. Swap cBTC (Citrea Native) to NUSD (Satsuma)",
+        "5. Swap USDC to SUMA (Satsuma) - Interactive",
+        "6. Swap USDC to WCBTC (Satsuma) - Interactive",
+        "7. Add Liquidity (WCBTC + USDC) (Satsuma) - Fixed Amounts",
+        "8. Convert SUMA to veSUMA (Satsuma)",
+        "9. Stake veSUMA (Satsuma)",
+        "10. Claim LP Reward (Satsuma)",
+        "11. Run All Features",
+        "12. Exit"
     ]
 
     for opt in options:
         table.add_row(opt)
 
     console.print(table)
-    choice = console.input("[bold magenta]> Select option (1-11): [/bold magenta]")
+    choice = console.input("[bold magenta]> Select option (1-12): [/bold magenta]")
     return choice
 
 # Load or initialize user settings (from previous script, adapted)
@@ -74,8 +75,8 @@ def load_user_settings():
         if os.path.exists(CONFIG_FILE):
             with open(CONFIG_FILE, 'r') as f:
                 data = json.load(f)
-                user_settings["transaction_count"] = data.get("transaction_count", 0)
-                # console.print(f"[green]+ Loaded saved transaction count: {user_settings['transaction_count']}[/green]")
+            user_settings["transaction_count"] = data.get("transaction_count", 0)
+            # console.print(f"[green]+ Loaded saved transaction count: {user_settings['transaction_count']}[/green]")
     except Exception as e:
         console.print(f"[red]- Error loading settings: {str(e)}[/red]")
     return user_settings
@@ -110,6 +111,7 @@ def load_config():
         # Nectra Contracts
         "nectra_borrow_contract_address": Web3.to_checksum_address("0x6cDC594d5A135d0307aee3449023A42385422355"),
         "nectra_deposit_contract_address": Web3.to_checksum_address("0x2e8ff07d4F29DA47209a58AD66845F7c290E78fD"),
+        "nectra_reward_contract_address": Web3.to_checksum_address("0x2e8ff07d4F29DA47209a58AD66845F7c290E78fD"), # Assuming same as deposit for claim
 
         # Token Addresses (updated based on user's new data)
         "usdc_address": Web3.to_checksum_address("0x36c16eaC6B0Ba6c50f494914ff015fCa95B7835F"),
@@ -433,6 +435,20 @@ async def deposit_nusd(w3, config, private_key):
 
     await send_custom_transaction(w3, config, account, to_address, data_hex, value_wei, gas_limit, gas_price_wei, "Deposit NUSD")
 
+async def claim_nectra_reward(w3, config, private_key):
+    account = w3.eth.account.from_key(private_key)
+    console.print(f"\n[blue]=== Claiming Nectra Reward for: {account.address} ===[/blue]")
+
+    # Transaction details from user's provided data
+    to_address = config["nectra_reward_contract_address"] # "0x2e8ff07d4F29DA47209a58AD66845F7c290E78fD"
+    data_hex = "0x4e71d92d"
+    value_wei = 0x0
+    gas_limit = 0x1add1 # From provided tx data
+    gas_price_wei = 0xb71b78 # From provided tx data
+
+    await send_custom_transaction(w3, config, account, to_address, data_hex, value_wei, gas_limit, gas_price_wei, "Claim Nectra Reward")
+
+
 # === Satsuma Functions ===
 async def swap_cbtc_to_nusd(w3, config, private_key):
     account = w3.eth.account.from_key(private_key)
@@ -746,6 +762,8 @@ async def run_all_features(w3, config, private_keys):
         await asyncio.sleep(random.uniform(10, 20)) # Delay between actions
         await deposit_nusd(w3, config, private_key)
         await asyncio.sleep(random.uniform(10, 20))
+        await claim_nectra_reward(w3, config, private_key) # Added to run_all_features
+        await asyncio.sleep(random.uniform(10, 20))
 
         # Satsuma Actions
         # Interactive swaps and LP add are not included in run_all_features
@@ -777,7 +795,7 @@ async def main():
             choice = display_menu()
             try:
                 option = int(choice)
-                if option == 11: # Updated exit option
+                if option == 12: # Updated exit option
                     console.print("[yellow]> Exiting Satsuma & Nectra Bot...[/yellow]")
                     sys.exit(0)
                 elif option == 1:
@@ -788,11 +806,15 @@ async def main():
                     for private_key in private_keys:
                         await deposit_nusd(w3, config, private_key)
                         await asyncio.sleep(random.uniform(5, 10))
-                elif option == 3:
+                elif option == 3: # New: Claim Nectra Reward
+                    for private_key in private_keys:
+                        await claim_nectra_reward(w3, config, private_key)
+                        await asyncio.sleep(random.uniform(5, 10))
+                elif option == 4: # Shifted: Swap cBTC to NUSD
                     for private_key in private_keys:
                         await swap_cbtc_to_nusd(w3, config, private_key)
                         await asyncio.sleep(random.uniform(5, 10))
-                elif option == 4: # Interactive USDC to SUMA Swap - Now asks amount once
+                elif option == 5: # Shifted: Interactive USDC to SUMA Swap
                     while True:
                         try:
                             usdc_amount_str = console.input("[bold magenta]> Enter the amount of USDC to swap (e.g., 20.5): [/bold magenta]")
@@ -807,7 +829,7 @@ async def main():
                     for private_key in private_keys:
                         await swap_usdc_to_suma_interactive(w3, config, private_key, usdc_amount_to_swap)
                         await asyncio.sleep(random.uniform(5, 10)) # Small delay between accounts
-                elif option == 5: # New option for Interactive USDC to WCBTC Swap - Now asks amount once
+                elif option == 6: # Shifted: New option for Interactive USDC to WCBTC Swap
                     while True:
                         try:
                             usdc_amount_str = console.input("[bold magenta]> Enter the amount of USDC to swap (e.g., 20.0): [/bold magenta]")
@@ -822,26 +844,26 @@ async def main():
                     for private_key in private_keys:
                         await swap_usdc_to_wcbtc_interactive(w3, config, private_key, usdc_amount_to_swap)
                         await asyncio.sleep(random.uniform(5, 10)) # Small delay between accounts
-                elif option == 6: # Add Liquidity - Now with maintenance warning
+                elif option == 7: # Shifted: Add Liquidity - Now with maintenance warning
                     console.print("[bold red]>[IMPORTANT]: This feature is currently under maintenance. Please select another option.[/bold red]")
                     await asyncio.sleep(2) # Give user time to read the message
                     # The loop will automatically go back to display_menu()
-                elif option == 7:
+                elif option == 8: # Shifted: Convert SUMA to veSUMA
                     for private_key in private_keys:
                         await convert_suma_to_vesuma(w3, config, private_key)
                         await asyncio.sleep(random.uniform(5, 10))
-                elif option == 8:
+                elif option == 9: # Shifted: Stake veSUMA
                     for private_key in private_keys:
                         await stake_vesuma(w3, config, private_key)
                         await asyncio.sleep(random.uniform(5, 10))
-                elif option == 9: # Option for Claim LP Reward
+                elif option == 10: # Shifted: Option for Claim LP Reward
                     for private_key in private_keys:
                         await claim_lp_reward(w3, config, private_key)
                         await asyncio.sleep(random.uniform(5, 10))
-                elif option == 10: # Option for Run All Features
+                elif option == 11: # Shifted: Option for Run All Features
                     await run_all_features(w3, config, private_keys)
                 else:
-                    console.print("[red]- Invalid option. Please select 1-11.[/red]")
+                    console.print("[red]- Invalid option. Please select 1-12.[/red]")
             except ValueError:
                 console.print("[red]- Invalid input. Please enter a number.[/red]")
             except Exception as e:
